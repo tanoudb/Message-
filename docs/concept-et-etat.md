@@ -32,6 +32,7 @@ Casse du 4ᵉ mur assumée : heure réelle, batterie réelle, l'entité peut s'e
 - **Pas de moteur de jeu** (Godot/Unity exclus) — c'est une interface, pas un jeu physique/3D.
 - App **Flutter** — tranché (Kotlin/Compose écarté). Le moteur de jeu est du Dart pur, sans dépendance Flutter, dans `app/lib/engine/` : testable en headless et séparé de l'UI.
 - **Zéro backend, zéro API/IA en ligne au runtime.** Fonctionne 100% hors-ligne.
+- **IA locale optionnelle** (LLM sur l'appareil, Gemma 3 1B via MediaPipe) : architecture « les règles jugent, le modèle parle ». Le LLM reformule les répliques de banque dans le style de l'entité (l'intention et le sens sont imposés par le moteur) et répond librement aux messages hors interrogatoire. Génération masquée par l'indicateur « en train d'écrire… » ; timeout et erreurs retombent sur la réplique de banque. Modèle `.task` fourni par le joueur via l'écran de réglages (pas de téléchargement intégré).
 - Le texte libre du joueur est évalué par un **système de règles local** :
   - alibi stocké comme données structurées (pas du texte brut)
   - banques de mots-clés/synonymes et d'incompatibilités par sujet

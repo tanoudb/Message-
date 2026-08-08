@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../ai/entity_voice.dart';
 import '../engine/archetypes.dart';
 import '../engine/game.dart';
 import 'palette.dart';
@@ -38,6 +39,9 @@ class _Msg {
 class ChatScreen extends StatefulWidget {
   final GameEngine engine;
 
+  /// Voix de l'entité : banques de répliques, ou LLM local qui les reformule.
+  final EntityVoice voice;
+
   /// Batterie réelle au moment T (pour la mort du Creux), null si inconnue.
   final int? Function() batteryPct;
   final void Function(GameResult result) onFinished;
@@ -48,6 +52,7 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
     required this.engine,
+    this.voice = const BankVoice(),
     required this.batteryPct,
     required this.onFinished,
     required this.onGlitch,
@@ -69,6 +74,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _ended = false;
   DateTime _qShownAt = DateTime.now();
   Timer? _nudgeTimer;
+  String _lastPlayerText = '';
 
   @override
   void initState() {
@@ -132,6 +138,92 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /* ---------- voix (IA locale ou banques) ---------- */
+
+  /// Derniers échanges affichés, pour donner du contexte au modèle.
+  List<VoiceTurn> _history([int n = 6]) => _msgs
+      .where((m) => m.kind == _MsgKind.inn || m.kind == _MsgKind.out)
+      .toList()
+      .reversed
+      .take(n)
+      .toList()
+      .reversed
+      .map((m) => VoiceTurn(m.kind == _MsgKind.out, m.text))
+      .toList();
+
+  static String _intentFor(Verdict? v) => switch (v) {
+        Verdict.contradiction =>
+          "fais-lui comprendre qu'il vient de se contredire, sans détailler ce que tu sais",
+        Verdict.hourOff => "note que son horaire ne colle pas tout à fait",
+        Verdict.memhole =>
+          'relève son trou de mémoire : on n\'oublie pas ce qu\'on a vécu hier',
+        Verdict.unsure =>
+          'sa réponse est floue : pousse-le à répondre vraiment, sans l\'aider',
+        Verdict.good => 'accuse réception à ta manière avant de passer à la suite',
+        null => 'réagis à son message à ta manière',
+      };
+
+  /// Fait parler l'entité via la voix : la génération du modèle se fait
+  /// PENDANT que l'indicateur « en train d'écrire… » est affiché, donc la
+  /// latence de l'IA devient du temps de frappe crédible.
+  Future<void> _sayVoiced(String base, {required String intent}) async {
+    if (_ended || !mounted) return;
+    if (base.isEmpty) {
+      await _sleep(_randInt(900, 1600));
+      return;
+    }
+    setState(() {
+      _sub = "en train d'écrire…";
+      _typing = true;
+    });
+    _scrollDown();
+    final generation = widget.voice.render(
+      archId: engine.arch.id,
+      base: base,
+      intent: intent,
+      playerText: _lastPlayerText,
+      history: _history(),
+    );
+    final minDelay = _sleep(engine.typingDelayMs(base));
+    final text = await generation;
+    await minDelay;
+    if (!mounted) return;
+    await _showBubbles(text);
+  }
+
+  /// Affiche un texte comme 1 ou 2 bulles (les messages longs se coupent
+  /// à une fin de phrase, comme quelqu'un qui envoie deux SMS).
+  Future<void> _showBubbles(String text) async {
+    var parts = <String>[text];
+    if (text.length > 90) {
+      final m = RegExp(r'^(.{40,110}[.!?…])\s+(.+)$').firstMatch(text);
+      if (m != null) parts = [m.group(1)!, m.group(2)!];
+    }
+    setState(() {
+      _typing = false;
+      _sub = 'en ligne';
+    });
+    _addMsg(_MsgKind.inn, engine.style(parts.first));
+    for (final p in parts.skip(1)) {
+      await _sleep(_randInt(250, 500));
+      if (!mounted) return;
+      setState(() => _typing = true);
+      _scrollDown();
+      await _sleep(engine.typingDelayMs(p) ~/ 2);
+      if (!mounted) return;
+      setState(() => _typing = false);
+      _addMsg(_MsgKind.inn, engine.style(p));
+    }
+    await _sleep(_randInt(300, 700));
+  }
+
+  /// Comme [_entitySayAll], mais à travers la voix.
+  Future<void> _sayVoicedAll(List<String> list, {required String intent}) async {
+    for (final t in list) {
+      await _sayVoiced(t, intent: intent);
+    }
+  }
+
   /* ---------- relance temporisée ---------- */
 
   void _clearNudge() {
@@ -174,13 +266,32 @@ class _ChatScreenState extends State<ChatScreen> {
     _inputCtrl.clear();
     _clearNudge();
     _addMsg(_MsgKind.out, text);
+    _lastPlayerText = text;
     await _sleep(_randInt(350, 800));
     _addMsg(_MsgKind.receipt, 'Lu à ${fmtTime()}');
 
     if (_handling || engine.current == null) {
-      // message hors question (ou entité en train de réagir)
+      // message hors question (ou entité en train de réagir) : avec l'IA
+      // locale, l'entité répond au contenu puis ramène à l'interrogatoire
       final r = engine.offtopic();
-      if (r != null && !_handling) await _entitySay(r);
+      if (r != null && !_handling) {
+        setState(() {
+          _sub = "en train d'écrire…";
+          _typing = true;
+        });
+        _scrollDown();
+        final generation = widget.voice.freeReply(
+          archId: engine.arch.id,
+          base: r,
+          playerText: text,
+          history: _history(),
+        );
+        final minDelay = _sleep(engine.typingDelayMs(r));
+        final reply = await generation;
+        await minDelay;
+        if (!mounted) return;
+        await _showBubbles(reply);
+      }
       return;
     }
 
@@ -192,13 +303,13 @@ class _ChatScreenState extends State<ChatScreen> {
       if (outcome.dead) return await _death();
 
       if (outcome.retry) {
-        await _entitySayAll(outcome.reactions);
+        await _sayVoicedAll(outcome.reactions, intent: _intentFor(outcome.verdict));
         _qShownAt = DateTime.now();
         _armNudge();
         return;
       }
 
-      await _entitySayAll(outcome.reactions);
+      await _sayVoicedAll(outcome.reactions, intent: _intentFor(outcome.verdict));
       if (outcome.warned) await _entitySay(engine.arch.warn);
       await _askNext();
     } finally {

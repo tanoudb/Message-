@@ -4,7 +4,10 @@ import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'ai/ai_settings.dart';
+import 'ai/entity_voice.dart';
 import 'engine/game.dart';
+import 'ui/ai_settings_sheet.dart';
 import 'ui/alibi_screen.dart';
 import 'ui/chat_screen.dart';
 import 'ui/end_screen.dart';
@@ -65,6 +68,10 @@ class _GamePageState extends State<GamePage> {
   bool _dim = false;
   int _runId = 0; // invalide les ChatScreen des parties précédentes
 
+  AiSettings? _aiSettings;
+  EntityVoice _voice = const BankVoice();
+  GemmaVoice? _gemma; // gardé chargé entre les parties (init coûteuse)
+
   @override
   void initState() {
     super.initState();
@@ -73,12 +80,59 @@ class _GamePageState extends State<GamePage> {
     _clock = Timer.periodic(const Duration(seconds: 15), (_) {
       if (mounted) setState(() {});
     });
+    _initAi();
+  }
+
+  Future<void> _initAi() async {
+    final s = await AiSettings.load();
+    _aiSettings = s;
+    if (s.enabled && s.modelInstalled) {
+      await _loadGemma(s);
+    }
+  }
+
+  Future<void> _loadGemma(AiSettings s) async {
+    try {
+      await AiSettings.declareToGemma(s.modelPath!);
+      final g = GemmaVoice();
+      if (await g.init()) {
+        _gemma = g;
+        _voice = g;
+      }
+    } catch (_) {
+      // modèle illisible → banques ; le jeu reste jouable
+      _voice = const BankVoice();
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _openAiSettings() async {
+    final s = _aiSettings ?? await AiSettings.load();
+    _aiSettings = s;
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Palette.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => AiSettingsSheet(settings: s),
+    );
+    // applique le choix au retour de la feuille
+    if (s.enabled && s.modelInstalled) {
+      if (_gemma == null) await _loadGemma(s);
+    } else {
+      await _gemma?.dispose();
+      _gemma = null;
+      _voice = const BankVoice();
+      if (mounted) setState(() {});
+    }
   }
 
   @override
   void dispose() {
     _battTimer?.cancel();
     _clock?.cancel();
+    _gemma?.dispose();
     super.dispose();
   }
 
@@ -128,7 +182,7 @@ class _GamePageState extends State<GamePage> {
   @override
   Widget build(BuildContext context) {
     final screen = switch (_phase) {
-      Phase.lock => LockScreen(onUnlock: _startRun),
+      Phase.lock => LockScreen(onUnlock: _startRun, onSettings: _openAiSettings),
       Phase.alibi => AlibiScreen(
           alibi: _engine.alibi,
           onDone: () => setState(() => _phase = Phase.chat),
@@ -136,6 +190,7 @@ class _GamePageState extends State<GamePage> {
       Phase.chat => ChatScreen(
           key: ValueKey('chat$_runId'),
           engine: _engine,
+          voice: _voice,
           batteryPct: () => _batteryPct,
           onFinished: _onFinished,
           onGlitch: _playGlitch,

@@ -20,6 +20,15 @@ flutter build apk    # APK release
 
 Dans les deux cas : aucune dépendance réseau au runtime. Tout le moteur (génération d'alibi, évaluation du texte libre, archétypes) tourne en local.
 
+## IA locale (optionnelle)
+
+L'app peut embarquer un **LLM local** (Gemma via MediaPipe) qui rend les échanges vivants : l'entité reformule ses répliques dans son style et répond au contenu de ce que tu écris — toujours 100 % hors-ligne, l'inférence se fait sur le téléphone. **Le moteur de règles reste le juge** (alibi, contradictions, verrouillages) : le modèle n'est que la voix. Sans modèle installé, le jeu utilise ses banques de répliques écrites.
+
+Installation :
+1. Télécharger un modèle au format MediaPipe `.task`, ex. **Gemma 3 1B IT int4** (~550 Mo) depuis Hugging Face ([litert-community/Gemma3-1B-IT](https://huggingface.co/litert-community/Gemma3-1B-IT), licence Gemma à accepter) et le transférer sur le téléphone.
+2. Dans le jeu : engrenage en haut à droite de l'écran verrouillé → **IA locale** → *Choisir le fichier modèle*.
+3. Activer « Utiliser l'IA locale ». La génération se cache derrière l'indicateur « en train d'écrire… » ; en cas de lenteur ou d'erreur, la réplique écrite part à la place — le jeu ne casse jamais.
+
 ## Contenu du dépôt
 
 | Chemin | Rôle |

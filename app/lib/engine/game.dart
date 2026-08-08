@@ -66,11 +66,15 @@ class TurnOutcome {
   /// Ajouter l'avertissement (arch.warn) après les réactions
   final bool warned;
   final bool dead;
+
+  /// Verdict du moteur sur la réponse (pour teinter la mise en scène).
+  final Verdict? verdict;
   const TurnOutcome({
     this.reactions = const [],
     this.retry = false,
     this.warned = false,
     this.dead = false,
+    this.verdict,
   });
 }
 
@@ -378,7 +382,9 @@ class GameEngine {
       current = step;
       final firstReaction = reactions.isEmpty ? <String>[] : [reactions.first];
       return TurnOutcome(
-          reactions: [...firstReaction, pickReact('relance')], retry: true);
+          reactions: [...firstReaction, pickReact('relance')],
+          retry: true,
+          verdict: Verdict.unsure);
     }
 
     switch (res.v) {
@@ -414,7 +420,8 @@ class GameEngine {
 
     if (suspicion >= 100 || strikes.length >= 3) {
       dead = true;
-      return TurnOutcome(reactions: reactions.take(2).toList(), dead: true);
+      return TurnOutcome(
+          reactions: reactions.take(2).toList(), dead: true, verdict: res.v);
     }
 
     var justWarned = false;
@@ -438,7 +445,10 @@ class GameEngine {
       queue.insertAll(0, steps);
     }
 
-    return TurnOutcome(reactions: reactions.take(2).toList(), warned: justWarned);
+    return TurnOutcome(
+        reactions: reactions.take(2).toList(),
+        warned: justWarned,
+        verdict: res.v);
   }
 
   List<String> introLines() => _rand(arch.introVariants(alibi));

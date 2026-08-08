@@ -6,7 +6,8 @@ import 'palette.dart';
 
 class LockScreen extends StatefulWidget {
   final VoidCallback onUnlock;
-  const LockScreen({super.key, required this.onUnlock});
+  final VoidCallback? onSettings;
+  const LockScreen({super.key, required this.onUnlock, this.onSettings});
 
   @override
   State<LockScreen> createState() => _LockScreenState();
@@ -94,6 +95,16 @@ class _LockScreenState extends State<LockScreen> {
               ],
             ),
             const Positioned(bottom: 56, child: _PulsingHint()),
+            if (widget.onSettings != null)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton(
+                  onPressed: widget.onSettings,
+                  icon: const Icon(Icons.settings_outlined,
+                      size: 20, color: Color(0xFF3A3D46)),
+                ),
+              ),
           ],
         ),
       ),
