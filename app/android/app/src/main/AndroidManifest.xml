@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Uniquement pour le téléchargement optionnel du modèle d'IA locale -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Messages"
         android:name="${applicationName}"

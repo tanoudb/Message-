@@ -6,7 +6,9 @@ import 'palette.dart';
 class EndScreen extends StatelessWidget {
   final GameResult result;
   final VoidCallback onReplay;
-  const EndScreen({super.key, required this.result, required this.onReplay});
+  final VoidCallback? onSettings;
+  const EndScreen(
+      {super.key, required this.result, required this.onReplay, this.onSettings});
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +84,12 @@ class EndScreen extends StatelessWidget {
                 ),
               ),
             ),
+            if (onSettings != null)
+              TextButton(
+                onPressed: onSettings,
+                child: const Text('Réglages IA',
+                    style: TextStyle(fontSize: 13, color: Palette.textDim)),
+              ),
           ],
         ),
       ),

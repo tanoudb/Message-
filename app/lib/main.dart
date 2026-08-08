@@ -93,7 +93,11 @@ class _GamePageState extends State<GamePage> {
 
   Future<void> _loadGemma(AiSettings s) async {
     try {
-      await AiSettings.declareToGemma(s.modelPath!);
+      // modèle installé par fichier : re-déclarer le chemin ; téléchargé
+      // en interne par flutter_gemma : le modèle actif est déjà persisté
+      if (s.modelPath != null) {
+        await AiSettings.declareToGemma(s.modelPath!);
+      }
       final g = GemmaVoice();
       if (await g.init()) {
         _gemma = g;
@@ -113,6 +117,7 @@ class _GamePageState extends State<GamePage> {
     await showModalBottomSheet(
       context: context,
       backgroundColor: Palette.surface,
+      isScrollControlled: true, // laisse la place au clavier (URL, jeton)
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => AiSettingsSheet(settings: s),
@@ -195,7 +200,8 @@ class _GamePageState extends State<GamePage> {
           onFinished: _onFinished,
           onGlitch: _playGlitch,
         ),
-      Phase.end => EndScreen(result: _result!, onReplay: _startRun),
+      Phase.end => EndScreen(
+          result: _result!, onReplay: _startRun, onSettings: _openAiSettings),
     };
 
     Widget phone = Column(children: [

@@ -96,6 +96,16 @@ void main() {
       expect(probeKeys.any(sensoryKeys.contains), isTrue);
     });
 
+    test('jamais deux fois de suite le même archétype', () {
+      final e = GameEngine(rng: Random(33));
+      String? last;
+      for (var i = 0; i < 100; i++) {
+        e.startRun();
+        expect(e.arch.id, isNot(last), reason: 'partie $i');
+        last = e.arch.id;
+      }
+    });
+
     test('tirage pondéré : les 5 sortent, le Miroir est rare', () {
       final e = GameEngine(rng: Random(1));
       final counts = <String, int>{};

@@ -43,9 +43,12 @@ class _LockScreenState extends State<LockScreen> {
       onTap: widget.onUnlock,
       child: Container(
         color: Colors.black,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
+        // SafeArea : en plein écran immersif, l'encoche et les coins
+        // arrondis recouvraient le contenu (et le bouton de réglages)
+        child: SafeArea(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -94,18 +97,40 @@ class _LockScreenState extends State<LockScreen> {
                 ),
               ],
             ),
-            const Positioned(bottom: 56, child: _PulsingHint()),
-            if (widget.onSettings != null)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: IconButton(
-                  onPressed: widget.onSettings,
-                  icon: const Icon(Icons.settings_outlined,
-                      size: 20, color: Color(0xFF3A3D46)),
+              const Positioned(bottom: 56, child: _PulsingHint()),
+              if (widget.onSettings != null)
+                Positioned(
+                  top: 10,
+                  right: 12,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: widget.onSettings,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.settings_outlined,
+                                size: 16, color: Palette.textDim),
+                            SizedBox(width: 6),
+                            Text('IA',
+                                style: TextStyle(
+                                    fontSize: 13, color: Palette.textDim)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

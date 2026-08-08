@@ -172,7 +172,10 @@ class GameEngine {
     return base + (perChar > 2000 ? 2000 : perChar);
   }
 
-  Archetype pickArch() {
+  /// Dernier archétype joué : jamais deux fois de suite la même entité.
+  String? _lastArchId;
+
+  Archetype _pickWeighted() {
     final total = archWeights.fold<int>(0, (s, e) => s + e.$2);
     var r = rng.nextDouble() * total;
     for (final (id, w) in archWeights) {
@@ -180,6 +183,14 @@ class GameEngine {
       if (r < 0) return allArchetypes.firstWhere((a) => a.id == id);
     }
     return archiviste;
+  }
+
+  Archetype pickArch() {
+    var a = _pickWeighted();
+    while (a.id == _lastArchId) {
+      a = _pickWeighted();
+    }
+    return a;
   }
 
   /// Style de sortie : le Métronome écrit en minuscules, le Miroir
@@ -195,6 +206,7 @@ class GameEngine {
   void startRun({Archetype? force}) {
     alibi = generateAlibi(rng);
     arch = force ?? pickArch();
+    _lastArchId = arch.id;
     suspicion = 0;
     strikes.clear();
     locks.clear();
