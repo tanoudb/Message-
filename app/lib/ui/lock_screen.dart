@@ -10,11 +10,18 @@ class LockScreen extends StatefulWidget {
 
   /// Corps de la notification — varie selon la progression du joueur.
   final String notifBody;
-  const LockScreen(
-      {super.key,
-      required this.onUnlock,
-      this.onSettings,
-      this.notifBody = '1 nouveau message'});
+
+  /// Accès aux Archives (null tant qu'aucun fragment n'a été obtenu).
+  final VoidCallback? onArchives;
+  final int archivesCount;
+  const LockScreen({
+    super.key,
+    required this.onUnlock,
+    this.onSettings,
+    this.onArchives,
+    this.archivesCount = 0,
+    this.notifBody = '1 nouveau message',
+  });
 
   @override
   State<LockScreen> createState() => _LockScreenState();
@@ -106,6 +113,18 @@ class _LockScreenState extends State<LockScreen> {
               ],
             ),
               const Positioned(bottom: 56, child: _PulsingHint()),
+              if (widget.onArchives != null)
+                Positioned(
+                  bottom: 14,
+                  child: TextButton.icon(
+                    onPressed: widget.onArchives,
+                    icon: const Icon(Icons.folder_outlined,
+                        size: 15, color: Palette.textDim),
+                    label: Text('Archives · ${widget.archivesCount}',
+                        style: const TextStyle(
+                            fontSize: 12.5, color: Palette.textDim)),
+                  ),
+                ),
               if (widget.onSettings != null)
                 Positioned(
                   top: 10,

@@ -85,6 +85,16 @@ Le prototype HTML (`index.html`) reste en contenu v3 : l'app Flutter est désorm
 - ✅ **Flutter tranché** et portage Android fait (`app/`) : moteur v3 complet en Dart pur (`app/lib/engine/`), UI native (`app/lib/ui/`) — écran verrouillé, note d'alibi qui se dissout, conversation avec indicateur de frappe, les 4 mises en scène de mort, vibration réelle, batterie réelle via `battery_plus`, mode plein écran immersif. 23 tests (`flutter test`), dont 100 parties complètes simulées ; APK debug compilé avec succès.
 - 🔄 v3 HTML et app Flutter à tester sur appareil.
 
+### Le récit long : le carnet (v1.4)
+
+**La vraie raison de revenir.** Les statistiques ne retiennent personne ; une histoire inachevée, si.
+
+- **Un fragment par nuit.** À la fin de chaque nuit — survie *ou* mort — quand le joueur croit que c'est terminé, le téléphone vibre une dernière fois : l'entité envoie un dernier message. Ce sont les 12 fragments d'un récit qui se dévoile lentement.
+- **L'histoire** : les alibis qu'on fait porter au joueur ne sont pas des inventions, ce sont les souvenirs de personnes réelles — celles que l'entité a interrogées avant lui, et qui ont disparu. Elle tient un carnet de prénoms, certains rayés. Elle ne cherche pas un menteur (« n'importe qui ment, ça ne m'apprend rien ») : elle cherche à savoir qui est encore là pour répondre. Le douzième fragment referme la boucle sur le joueur lui-même.
+- **Les Archives** : écran dédié (accessible depuis l'écran verrouillé et l'écran de fin) où relire les fragments obtenus. Les suivants sont **masqués par des points qui conservent la forme exacte du texte manquant** — on voit précisément ce qu'on n'a pas encore. Le compteur « 3 / 12 » et la phrase « Elle n'a pas fini de parler » font le reste.
+- **L'entité réécrit au joueur absent** : notification locale programmée à la fin de chaque nuit, qui arrive quelques heures plus tard et de préférence la nuit (22 h-1 h) — « Numéro inconnu · tu dors ? », « Ton dossier est resté ouvert. », « Tu as arrêté de répondre. Les autres aussi, au début. » Entièrement local, désactivable dans les réglages, et sans effet si la permission est refusée.
+- **Mémoire des mensonges entre les nuits** : les improvisations verrouillées d'une nuit sont conservées, et l'entité en ressort une la nuit suivante (« La nuit dernière, tu as évoqué le nom de ton ami. Répète-le. »). Se contredire d'une partie à l'autre est désormais possible — et sanctionné.
+
 ### Méta-progression : les « nuits » (v1.3)
 
 Le cœur de la rejouabilité. Chaque partie est une **nuit numérotée**, et la progression est persistante (survit à la fermeture de l'app).

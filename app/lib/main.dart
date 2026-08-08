@@ -8,8 +8,11 @@ import 'ai/ai_settings.dart';
 import 'ai/entity_voice.dart';
 import 'engine/game.dart';
 import 'meta/progress.dart';
+import 'meta/reminders.dart';
+import 'meta/story.dart';
 import 'ui/ai_settings_sheet.dart';
 import 'ui/alibi_screen.dart';
+import 'ui/archives_screen.dart';
 import 'ui/chat_screen.dart';
 import 'ui/end_screen.dart';
 import 'ui/lock_screen.dart';
@@ -22,6 +25,7 @@ void main() {
   // Immersif : le jeu EST le téléphone, pas de vraie barre système
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   Sfx.load();
+  Reminders.init();
   runApp(const MessagesApp());
 }
 
@@ -49,7 +53,7 @@ class MessagesApp extends StatelessWidget {
   }
 }
 
-enum Phase { lock, alibi, chat, end }
+enum Phase { lock, alibi, chat, end, archives }
 
 class GamePage extends StatefulWidget {
   const GamePage({super.key});
@@ -160,9 +164,11 @@ class _GamePageState extends State<GamePage> {
 
   void _startRun() {
     Sfx.play('unlock', volume: 0.5);
+    Reminders.cancel(); // il joue : inutile de le relancer
     _engine.startRun(
       difficulty: _progress.difficulty,
       returning: _progress.nights > 0,
+      pastLies: _progress.lastLies,
     );
     setState(() {
       _runId++;
@@ -170,6 +176,9 @@ class _GamePageState extends State<GamePage> {
       _result = null;
     });
   }
+
+  /// Le fragment du récit livré à la fin de la nuit qui commence.
+  List<String>? get _storyLines => fragmentFor(_progress.fragments)?.lignes;
 
   /// Temps de mémorisation de la note : 45 s, moins 5 s par niveau (min 30).
   int get _alibiSeconds {
@@ -198,7 +207,20 @@ class _GamePageState extends State<GamePage> {
   void _onFinished(GameResult r) {
     if (!mounted) return;
     _progress.recordRun(archId: _engine.arch.id, won: r.won);
+    // le fragment vient d'être livré dans la conversation
+    if (_progress.fragments < storyLength) _progress.fragments++;
+    // ce que le joueur a inventé cette nuit servira contre lui la prochaine
+    final lies = _engine.liesToRemember();
+    if (lies.isNotEmpty) {
+      _progress.lastLies
+        ..clear()
+        ..addAll(lies);
+    }
     _progress.save();
+    // l'entité relancera le joueur s'il ne revient pas
+    Reminders.schedule(
+      reminderTexts[DateTime.now().millisecond % reminderTexts.length],
+    );
     setState(() {
       _result = r;
       _phase = Phase.end;
@@ -211,6 +233,10 @@ class _GamePageState extends State<GamePage> {
       Phase.lock => LockScreen(
           onUnlock: _startRun,
           onSettings: _openAiSettings,
+          onArchives: _progress.fragments > 0
+              ? () => setState(() => _phase = Phase.archives)
+              : null,
+          archivesCount: _progress.fragments,
           notifBody: _progress.nights == 0
               ? '1 nouveau message'
               : (_progress.streak > 0
@@ -226,6 +252,7 @@ class _GamePageState extends State<GamePage> {
           key: ValueKey('chat$_runId'),
           engine: _engine,
           voice: _voice,
+          storyLines: _storyLines,
           batteryPct: () => _batteryPct,
           onFinished: _onFinished,
           onGlitch: _playGlitch,
@@ -234,11 +261,18 @@ class _GamePageState extends State<GamePage> {
           result: _result!,
           progress: _progress,
           onReplay: _startRun,
-          onSettings: _openAiSettings),
+          onSettings: _openAiSettings,
+          onArchives: () => setState(() => _phase = Phase.archives),
+        ),
+      Phase.archives => ArchivesScreen(
+          progress: _progress,
+          onClose: () => setState(
+              () => _phase = _result == null ? Phase.lock : Phase.end),
+        ),
     };
 
     Widget phone = Column(children: [
-      if (_phase != Phase.lock && _phase != Phase.end)
+      if (_phase == Phase.alibi || _phase == Phase.chat)
         StatusBar(batteryPct: _batteryPct),
       Expanded(child: screen),
     ]);

@@ -11,7 +11,7 @@ import 'alibi.dart';
 import 'archetypes.dart';
 import 'text_utils.dart';
 
-enum StepType { fact, probe, reprobe, reprobeMarker }
+enum StepType { fact, probe, reprobe, reprobeMarker, pastLie }
 
 class Step {
   final StepType type;
@@ -209,9 +209,24 @@ class GameEngine {
   /// Le joueur a déjà joué : l'entité s'en souvient dans son intro.
   bool returning = false;
 
-  void startRun({Archetype? force, int difficulty = 0, bool returning = false}) {
+  /// Improvisations de la nuit précédente (label → mots), que l'entité
+  /// ressort pour confronter le joueur à ses propres inventions.
+  Map<String, String> pastLies = const {};
+
+  /// Ce que le joueur a improvisé cette nuit, à conserver pour la
+  /// prochaine (label → mots-clés joints).
+  Map<String, String> liesToRemember() =>
+      {for (final l in locks.values) l.label: l.words.join(' ')};
+
+  void startRun({
+    Archetype? force,
+    int difficulty = 0,
+    bool returning = false,
+    Map<String, String> pastLies = const {},
+  }) {
     this.difficulty = difficulty;
     this.returning = returning;
+    this.pastLies = pastLies;
     alibi = generateAlibi(rng);
     arch = force ?? pickArch();
     _lastArchId = arch.id;
@@ -264,6 +279,24 @@ class GameEngine {
         Step(type: StepType.fact, kind: 'hRetour', text: arch.qHRetour),
         const Step(type: StepType.reprobeMarker), // remplacé au vol
       ]);
+
+    // L'entité ressort une invention de la nuit précédente : le joueur
+    // doit rester cohérent d'une partie à l'autre, pas seulement dans
+    // la conversation en cours.
+    if (pastLies.isNotEmpty) {
+      final key = _shuffledList(pastLies.keys.toList()).first;
+      queue.insert(
+        3 + (queue.length > 8 ? 1 : 0),
+        Step(
+          type: StepType.pastLie,
+          key: key,
+          label: key,
+          text: arch.voice == 'C'
+              ? "attends... la dernière fois tu m'avais parlé de $key. redis-moi ?"
+              : 'La nuit dernière, tu as évoqué $key. Répète-le.',
+        ),
+      );
+    }
   }
 
   /// Re-vérifications construites à partir des improvisations verrouillées.
@@ -381,6 +414,22 @@ class GameEngine {
     return EvalResult(Verdict.contradiction, 'version changée : ${lock.label}');
   }
 
+  /// Confrontation à une invention d'une nuit précédente.
+  EvalResult evalPastLie(Step step, String answer) {
+    final past = (pastLies[step.key] ?? '').split(' ').where((s) => s.isNotEmpty);
+    final w = contentWords(answer);
+    if (hasAny(answer, memoryHole)) {
+      return EvalResult(
+          Verdict.contradiction, 'a oublié ce qu\'il avait dit une autre nuit');
+    }
+    if (w.isEmpty || past.isEmpty) return const EvalResult(Verdict.unsure);
+    final overlap =
+        w.where((x) => past.any((l) => lev(x, l) <= (l.length >= 6 ? 2 : 1)));
+    if (overlap.isNotEmpty) return const EvalResult(Verdict.good);
+    return EvalResult(
+        Verdict.contradiction, 'contredit sa version d\'une nuit précédente');
+  }
+
   /// Juge la réponse à la question en cours. L'UI affiche les réactions,
   /// puis appelle [nextStep] (sauf retry : la question reste en cours,
   /// ou dead : partie finie).
@@ -422,6 +471,7 @@ class GameEngine {
     var res = switch (step.type) {
       StepType.fact => evalFact(step.kind!, text),
       StepType.probe => evalProbe(step, text),
+      StepType.pastLie => evalPastLie(step, text),
       _ => evalReprobe(step, text),
     };
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../ai/ai_settings.dart';
+import '../meta/reminders.dart';
 import 'palette.dart';
 import 'sfx.dart';
 
@@ -101,6 +102,20 @@ class _AiSettingsSheetState extends State<AiSettingsSheet> {
                 value: Sfx.enabled,
                 onChanged: (v) async {
                   await Sfx.setEnabled(v);
+                  if (mounted) setState(() {});
+                },
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text("Laisser l'entité me réécrire",
+                    style: TextStyle(fontSize: 15)),
+                subtitle: const Text(
+                    'Elle enverra un message quand tu auras arrêté de jouer.',
+                    style: TextStyle(fontSize: 12, color: Palette.textDim)),
+                value: Reminders.enabled,
+                onChanged: (v) async {
+                  if (v) await Reminders.requestPermission();
+                  await Reminders.setEnabled(v);
                   if (mounted) setState(() {});
                 },
               ),

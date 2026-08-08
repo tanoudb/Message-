@@ -64,6 +64,10 @@ class ChatScreen extends StatefulWidget {
   /// Voix de l'entité : banques de répliques, ou LLM local qui les reformule.
   final EntityVoice voice;
 
+  /// Fragment du récit livré à la toute fin de la nuit (null si le
+  /// carnet est terminé). Le téléphone vibre une dernière fois.
+  final List<String>? storyLines;
+
   /// Batterie réelle au moment T (pour la mort du Creux), null si inconnue.
   final int? Function() batteryPct;
   final void Function(GameResult result) onFinished;
@@ -75,6 +79,7 @@ class ChatScreen extends StatefulWidget {
     super.key,
     required this.engine,
     this.voice = const BankVoice(),
+    this.storyLines,
     required this.batteryPct,
     required this.onFinished,
     required this.onGlitch,
@@ -424,9 +429,26 @@ class _ChatScreenState extends State<ChatScreen> {
 
   /* ---------- fins ---------- */
 
+  /// Le dernier message de la nuit : un fragment du récit. Il arrive
+  /// après le verdict, quand le joueur croit que c'est fini.
+  Future<void> _deliverStory() async {
+    final lines = widget.storyLines;
+    if (lines == null || lines.isEmpty) return;
+    _ended = false; // l'entité peut encore écrire
+    await _sleep(_randInt(1800, 2600));
+    if (!mounted) return;
+    HapticFeedback.mediumImpact();
+    for (final l in lines) {
+      await _entitySay(l);
+    }
+    _ended = true;
+    await _sleep(1400);
+  }
+
   Future<void> _win() async {
     await _entitySayAll(engine.winLines());
-    await _sleep(1500);
+    await _sleep(1200);
+    await _deliverStory();
     _ended = true;
     widget.onFinished(GameResult(
       won: true,
@@ -457,6 +479,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
     _ended = true;
     await widget.onGlitch();
+    await _deliverStory();
     widget.onFinished(GameResult(
       won: false,
       entityLabel: engine.arch.label,

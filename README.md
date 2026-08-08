@@ -40,6 +40,10 @@ Installation :
 | `prototypes/messages-v2.html` | Archive du prototype v2 (2 archétypes) testé par Ethan |
 | `docs/concept-et-etat.md` | Conception complète et état d'avancement du projet |
 
+## Le carnet
+
+À la fin de chaque nuit — que tu survives ou non — l'entité envoie un dernier message quand tu crois que c'est fini. Douze fragments qui révèlent peu à peu d'où viennent ces alibis, à qui ils ont appartenu, et ce qu'elle cherche vraiment. Les **Archives** gardent ce que tu as obtenu et masquent le reste. Elle se souvient aussi de ce que tu as inventé les nuits précédentes — et elle peut te le ressortir. Si tu arrêtes de jouer, elle t'écrit.
+
 ## Les nuits
 
 Chaque partie est une **nuit**. Survivre allonge une série ; mourir la casse (le record reste). Plus la série monte, plus les nuits durcissent : moins de temps pour mémoriser l'alibi, plus de zones d'ombre sondées, plus de re-vérifications, des entités plus pressantes. Un **dossier** garde la trace des cinq entités rencontrées et vaincues — le Miroir n'apparaissant qu'une fois sur dix, le compléter prend du temps. Et l'entité se souvient de toi d'une nuit à l'autre.

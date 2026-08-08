@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../engine/archetypes.dart';
 import '../meta/progress.dart';
+import '../meta/story.dart';
 import 'chat_screen.dart';
 import 'palette.dart';
 
@@ -10,12 +11,14 @@ class EndScreen extends StatelessWidget {
   final Progress? progress;
   final VoidCallback onReplay;
   final VoidCallback? onSettings;
+  final VoidCallback? onArchives;
   const EndScreen({
     super.key,
     required this.result,
     this.progress,
     required this.onReplay,
     this.onSettings,
+    this.onArchives,
   });
 
   @override
@@ -85,6 +88,10 @@ class EndScreen extends StatelessWidget {
                 if (p != null) ...[
                   const SizedBox(height: 18),
                   _NightStats(progress: p, won: r.won),
+                  if (onArchives != null) ...[
+                    const SizedBox(height: 12),
+                    _ArchivesTeaser(progress: p, onTap: onArchives!),
+                  ],
                 ],
                 const SizedBox(height: 24),
                 ConstrainedBox(
@@ -116,6 +123,73 @@ class EndScreen extends StatelessWidget {
                         style:
                             TextStyle(fontSize: 13, color: Palette.textDim)),
                   ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// L'accroche des Archives : ce qui vient d'être obtenu, et ce qui manque.
+class _ArchivesTeaser extends StatelessWidget {
+  final Progress progress;
+  final VoidCallback onTap;
+  const _ArchivesTeaser({required this.progress, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final got = progress.fragments;
+    final reste = storyLength - got;
+    final dernier = got > 0 ? storyFragments[got - 1].titre : null;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 320),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Palette.surface,
+              border: Border.all(color: Palette.accent.withValues(alpha: 0.35)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.folder_outlined,
+                        size: 16, color: Palette.accent),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        dernier == null
+                            ? 'Archives'
+                            : 'Fragment obtenu — $dernier',
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Palette.accent),
+                      ),
+                    ),
+                    Text('$got/$storyLength',
+                        style: const TextStyle(
+                            fontSize: 12, color: Palette.textDim)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  reste > 0
+                      ? "Elle n'a pas fini de parler. $reste ${reste == 1 ? 'fragment' : 'fragments'} restants."
+                      : 'Le carnet est complet.',
+                  style: const TextStyle(
+                      fontSize: 12.5,
+                      fontStyle: FontStyle.italic,
+                      color: Palette.textDim),
+                ),
               ],
             ),
           ),
