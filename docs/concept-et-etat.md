@@ -30,7 +30,7 @@ Casse du 4ᵉ mur assumée : heure réelle, batterie réelle, l'entité peut s'e
 ## 4. Contraintes techniques (tranchées)
 
 - **Pas de moteur de jeu** (Godot/Unity exclus) — c'est une interface, pas un jeu physique/3D.
-- App **native Kotlin + Jetpack Compose** ou **Flutter** — choix final pas encore arrêté.
+- App **Flutter** — tranché (Kotlin/Compose écarté). Le moteur de jeu est du Dart pur, sans dépendance Flutter, dans `app/lib/engine/` : testable en headless et séparé de l'UI.
 - **Zéro backend, zéro API/IA en ligne au runtime.** Fonctionne 100% hors-ligne.
 - Le texte libre du joueur est évalué par un **système de règles local** :
   - alibi stocké comme données structurées (pas du texte brut)
@@ -70,11 +70,13 @@ Même moteur d'évaluation pour tous, mais pondérations et style propres à cha
   - parties trop courtes → questions d'approfondissement après une bonne réponse, re-vérification des improvisations verrouillées, zones d'ombre non annoncées dans l'alibi
 - ✅ v2 archivée (`prototypes/messages-v2.html`), testée par Ethan.
 - ✅ **v3 (`index.html`)** : les 3 archétypes restants codés (Métronome, Creux, Miroir), tirage pondéré des entités, banques étoffées (20 prénoms, 14 métiers, 6 lieux avec détails et questions de creusement, 6 transports, 5 zones d'ombre générales + 3 sensorielles pour le Creux).
-- 🔄 v3 à tester.
+- ✅ **Flutter tranché** et portage Android fait (`app/`) : moteur v3 complet en Dart pur (`app/lib/engine/`), UI native (`app/lib/ui/`) — écran verrouillé, note d'alibi qui se dissout, conversation avec indicateur de frappe, les 4 mises en scène de mort, vibration réelle, batterie réelle via `battery_plus`, mode plein écran immersif. 23 tests (`flutter test`), dont 100 parties complètes simulées ; APK debug compilé avec succès.
+- 🔄 v3 HTML et app Flutter à tester sur appareil.
 
 **Reste à faire :**
-- Tester/ajuster la v3 (équilibrage des 3 nouveaux archétypes, en particulier les fenêtres de temps du Métronome)
+- Tester l'app Flutter sur un vrai téléphone Android (rythme, clavier, vibrations)
+- Ajuster l'équilibrage des 3 nouveaux archétypes, en particulier les fenêtres de temps du Métronome
 - Intégrer les retours de test v2 d'Ethan s'il en reste de non couverts
 - Étoffer encore les banques : plus d'alibis, de lieux, de détails, de questions de creusement par archétype
-- Trancher Kotlin/Compose vs Flutter pour le portage natif
+- Icône, écran de démarrage, build release signé
 - Une fois le contenu à grande échelle nécessaire (grandes banques de dialogues/questions/synonymes), Fable 5 prendra le relais comme "concepteur de contenu" sur la base de cette conception
