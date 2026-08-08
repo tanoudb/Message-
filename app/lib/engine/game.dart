@@ -142,9 +142,23 @@ class GameEngine {
   bool dead = false;
   int offtopicCount = 0;
   int exchanges = 0;
+  int _qNum = 0;
   final MirrorTracker mirror = MirrorTracker();
 
+  /// Sacs de réactions : chaque banque est servie mélangée et sans
+  /// répétition tant qu'elle n'est pas épuisée.
+  final Map<String, List<String>> _bags = {};
+
   T _rand<T>(List<T> a) => a[rng.nextInt(a.length)];
+
+  String pickReact(String key) {
+    final bank = arch.react[key] ?? const [];
+    if (bank.isEmpty) return '';
+    if (bank.length == 1) return bank.first;
+    final bag = _bags.putIfAbsent(key, () => []);
+    if (bag.isEmpty) bag.addAll(_shuffledList(bank));
+    return bag.removeLast();
+  }
   int _randInt(int a, int b) => a + rng.nextInt(b - a + 1);
 
   /// Délai de frappe de l'entité pour un message donné (ms).
@@ -186,6 +200,8 @@ class GameEngine {
     current = null;
     offtopicCount = 0;
     exchanges = 0;
+    _qNum = 0;
+    _bags.clear();
     mirror.reset();
     _buildQueue();
   }
@@ -228,7 +244,7 @@ class GameEngine {
             type: StepType.reprobe,
             key: k,
             label: locks[k]!.label,
-            text: arch.reprobe(locks[k]!.label)))
+            text: _rand(arch.reprobes)(locks[k]!.label)))
         .toList();
   }
 
@@ -240,6 +256,18 @@ class GameEngine {
       step = queue.isEmpty ? null : queue.removeAt(0);
     }
     if (step == null) return null;
+    if (arch.numberedQuestions) {
+      _qNum++;
+      step = Step(
+        type: step.type,
+        kind: step.kind,
+        p: step.p,
+        key: step.key,
+        label: step.label,
+        text: '$_qNum. ${step.text}',
+        creuseFrom: step.creuseFrom,
+      );
+    }
     current = step;
     retried = false;
     return step;
@@ -248,7 +276,7 @@ class GameEngine {
   /// Message hors question : renvoie la réaction à afficher, ou null.
   String? offtopic() {
     offtopicCount++;
-    if (offtopicCount <= 2) return _rand(arch.react['offtopic']!);
+    if (offtopicCount <= 2) return pickReact('offtopic');
     return null;
   }
 
@@ -314,28 +342,28 @@ class GameEngine {
 
     if (hasAny(text, insults)) {
       suspicion += w.insult;
-      reactions.add(_rand(arch.react['insult']!));
-      if (w.insult > 0) strikes.add('hostilité envers elle');
+      reactions.add(pickReact('insult'));
+      if (w.insult > 0) strikes.add("hostilité envers l'entité");
     }
     if (w.dry > 0 &&
         contentWords(text).isEmpty &&
         tokens(text).length <= 2 &&
         !hasAny(text, insults)) {
       suspicion += w.dry;
-      reactions.add(_rand(arch.react['dry']!));
+      reactions.add(pickReact('dry'));
     }
-    final slowList = arch.react['slow']!;
-    final fastList = arch.react['fast']!;
-    if (arch.slowMs > 0 && elapsedMs > arch.slowMs && slowList.isNotEmpty) {
+    if (arch.slowMs > 0 &&
+        elapsedMs > arch.slowMs &&
+        (arch.react['slow'] ?? const []).isNotEmpty) {
       suspicion += w.slow;
-      reactions.add(_rand(slowList));
+      reactions.add(pickReact('slow'));
     } else if (arch.fastMs > 0 &&
         elapsedMs < arch.fastMs &&
         w.fast > 0 &&
         text.length > 8 &&
-        fastList.isNotEmpty) {
+        (arch.react['fast'] ?? const []).isNotEmpty) {
       suspicion += w.fast;
-      reactions.add(_rand(fastList));
+      reactions.add(pickReact('fast'));
     }
 
     final res = switch (step.type) {
@@ -350,28 +378,26 @@ class GameEngine {
       current = step;
       final firstReaction = reactions.isEmpty ? <String>[] : [reactions.first];
       return TurnOutcome(
-          reactions: [...firstReaction, _rand(arch.react['relance']!)], retry: true);
+          reactions: [...firstReaction, pickReact('relance')], retry: true);
     }
 
     switch (res.v) {
       case Verdict.contradiction:
         suspicion += w.contradiction;
         strikes.add(res.d ?? 'contradiction');
-        reactions.add(_rand(arch.react['contradiction']!));
+        reactions.add(pickReact('contradiction'));
       case Verdict.hourOff:
         suspicion += (w.contradiction / 4).round();
-        reactions.add(arch.voice == 'A'
-            ? "Approximatif. Je note l'écart."
-            : "t'es sûr de l'heure ? bon... 🙂");
+        reactions.add(pickReact('hour_off'));
       case Verdict.memhole:
         suspicion += w.evasive + 4;
-        reactions.add(_rand(arch.react['memhole']!));
+        reactions.add(pickReact('memhole'));
         if (step.type == StepType.probe) {
           locks[step.p!.key] = Lock(step.p!.label, const ['oublie']);
         }
       case Verdict.unsure:
         suspicion += w.evasive;
-        reactions.add(_rand(arch.react['evasive']!));
+        reactions.add(pickReact('evasive'));
         if (step.type == StepType.probe) {
           locks[step.p!.key] = Lock(step.p!.label, contentWords(text));
         }
@@ -380,7 +406,7 @@ class GameEngine {
         if (arch.echoChance > 0 && rng.nextDouble() < arch.echoChance) {
           reactions.add('« $text »');
         }
-        if (reactions.isEmpty) reactions.add(_rand(arch.react['good']!));
+        if (reactions.isEmpty) reactions.add(pickReact('good'));
         if (step.type == StepType.fact && step.creuseFrom != null) {
           creuseAfter = step.creuseFrom;
         }
@@ -415,7 +441,7 @@ class GameEngine {
     return TurnOutcome(reactions: reactions.take(2).toList(), warned: justWarned);
   }
 
-  List<String> introLines() => arch.intro(alibi);
-  List<String> winLines() => arch.win(alibi);
+  List<String> introLines() => _rand(arch.introVariants(alibi));
+  List<String> winLines() => _rand(arch.winVariants(alibi));
   List<String> deathLines(String time) => arch.death(alibi, strikes, time);
 }

@@ -51,6 +51,17 @@ Même moteur d'évaluation pour tous, mais pondérations et style propres à cha
 | **Le Creux** | Rare en mots, silences (parfois aucune réaction), questions sensorielles décalées (bruit, odeur, lumière) | Réponses vides ou trop rapides, plus que la logique | Silence, faux départs de frappe, puis un seul message utilisant l'heure et la batterie réelles |
 | **Le Miroir** | Rare (~1/10), adopte progressivement le style d'écriture du joueur (casse, ponctuation, emojis), renvoie parfois ses réponses en écho | Contradictions + rupture de style | Renvoie mot pour mot la plus longue phrase du joueur |
 
+### Écriture des entités (app Flutter, version de référence)
+
+- **Banques de réactions fournies** (4 à 9 répliques par situation et par entité) servies par un « sac » mélangé : aucune réplique ne se répète tant que sa banque n'est pas épuisée.
+- **Plusieurs intros et plusieurs fins de victoire** par entité, tirées au sort à chaque partie.
+- **Plusieurs formulations de re-vérification** (« Reprenons. X — redis-le-moi. » / « Vérification de routine… » / …), tirées au sort.
+- **Réactions à l'heure approximative** propres à chaque entité (plus de réplique générique partagée).
+- **L'Archiviste numérote ses questions** (« 1. Où étais-tu hier soir ? ») — prévu dans la conception d'origine, désormais codé.
+- Touches de personnalité : la Confidente peut utiliser le prénom de l'alibi dans sa fin (« dors bien, Julien... si c'est ton prénom 🙂 »), le Métronome a des relances d'impatience supplémentaires, le Creux des silences même en fin heureuse, le Miroir des répliques d'identification troublantes.
+
+Le prototype HTML (`index.html`) reste en contenu v3 : l'app Flutter est désormais la référence du contenu.
+
 ### Mécaniques v3 par archétype
 
 - **Voix** : chaque archétype pioche les questions des banques dans sa voix ("A" formelle / "C" familière), avec en plus une transformation de style optionnelle (le Métronome écrit tout en minuscules, le Miroir applique le style du joueur).

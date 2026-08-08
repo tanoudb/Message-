@@ -50,12 +50,40 @@ void main() {
           expect(s.text, isNotEmpty);
         }
         expect(e.queue.last.type, StepType.reprobeMarker);
-        expect(arch.intro(e.alibi), isNotEmpty);
-        expect(arch.win(e.alibi), isNotEmpty);
+        expect(e.introLines(), isNotEmpty);
+        expect(e.winLines(), isNotEmpty);
+        for (final variant in arch.introVariants(e.alibi)) {
+          expect(variant, isNotEmpty);
+        }
+        for (final variant in arch.winVariants(e.alibi)) {
+          expect(variant, isNotEmpty);
+        }
+        for (final tpl in arch.reprobes) {
+          expect(tpl('le nom du bar').toLowerCase(), contains('le nom du bar'));
+        }
         // death peut être vide (le Creux ne parle pas avant sa mise en scène)
         arch.death(e.alibi, const ['x'], '23:00');
       });
     }
+
+    test("l'Archiviste numérote ses questions, les autres non", () {
+      final e = GameEngine(rng: Random(21));
+      e.startRun(force: archiviste);
+      expect(e.nextStep()!.text, startsWith('1. '));
+      expect(e.nextStep()!.text, startsWith('2. '));
+      final e2 = GameEngine(rng: Random(21));
+      e2.startRun(force: confidente);
+      expect(e2.nextStep()!.text, isNot(startsWith('1. ')));
+    });
+
+    test('les réactions ne se répètent pas avant épuisement de la banque', () {
+      final e = GameEngine(rng: Random(17));
+      e.startRun(force: archiviste);
+      final bank = archiviste.react['good']!;
+      final drawn = List.generate(bank.length, (_) => e.pickReact('good'));
+      expect(drawn.toSet().length, bank.length);
+      expect(drawn.toSet(), bank.toSet());
+    });
 
     test('le Creux reçoit une sonde sensorielle', () {
       final e = GameEngine(rng: Random(7));
