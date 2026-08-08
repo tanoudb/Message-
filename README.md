@@ -40,6 +40,10 @@ Installation :
 | `prototypes/messages-v2.html` | Archive du prototype v2 (2 archétypes) testé par Ethan |
 | `docs/concept-et-etat.md` | Conception complète et état d'avancement du projet |
 
+## Les nuits
+
+Chaque partie est une **nuit**. Survivre allonge une série ; mourir la casse (le record reste). Plus la série monte, plus les nuits durcissent : moins de temps pour mémoriser l'alibi, plus de zones d'ombre sondées, plus de re-vérifications, des entités plus pressantes. Un **dossier** garde la trace des cinq entités rencontrées et vaincues — le Miroir n'apparaissant qu'une fois sur dix, le compléter prend du temps. Et l'entité se souvient de toi d'une nuit à l'autre.
+
 ## Les 5 entités
 
 | Archétype | Rareté | Signature |

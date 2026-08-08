@@ -31,7 +31,16 @@ class GameResult {
   });
 }
 
-enum _MsgKind { inn, out, sys, receipt }
+enum _MsgKind { inn, out, sys, receipt, deleted }
+
+/// Fragment envoyé « par erreur » puis supprimé, une fois par nuit.
+const Map<String, String> _deletedFragments = {
+  'archiviste': "tu n'es pas le premier à t'appeler comme",
+  'confidente': 'je suis déjà venue devant chez',
+  'metronome': 'trop tard pour lui aussi il avait',
+  'creux': 'derrière toi il y a',
+  'miroir': 'je porte ton',
+};
 
 class _Msg {
   final _MsgKind kind;
@@ -85,6 +94,7 @@ class _ChatScreenState extends State<ChatScreen> {
   String _sub = 'en ligne';
   bool _handling = false;
   bool _ended = false;
+  bool _deletedShown = false;
   DateTime _qShownAt = DateTime.now();
   Timer? _nudgeTimer;
   String _lastPlayerText = '';
@@ -293,7 +303,9 @@ class _ChatScreenState extends State<ChatScreen> {
     _clearNudge();
     final n = engine.arch.nudge;
     if (n == null) return;
-    _nudgeTimer = Timer(Duration(milliseconds: n.afterMs), () async {
+    // les nuits difficiles rendent l'entité plus pressante
+    final after = (n.afterMs * math.pow(0.88, engine.difficulty)).round();
+    _nudgeTimer = Timer(Duration(milliseconds: after), () async {
       if (_ended || _handling || engine.current == null || !mounted) return;
       engine.suspicion += n.susp;
       await _entitySay(n.texts[engine.rng.nextInt(n.texts.length)]);
@@ -308,8 +320,35 @@ class _ChatScreenState extends State<ChatScreen> {
     await _askNext();
   }
 
+  /// Une fois par nuit, l'entité « laisse échapper » un fragment de
+  /// message, aussitôt supprimé. Le joueur ne saura jamais la suite.
+  Future<void> _maybeDeletedMessage() async {
+    if (_deletedShown || engine.exchanges < 2 || engine.rng.nextDouble() > 0.18) {
+      return;
+    }
+    _deletedShown = true;
+    if (!mounted) return;
+    setState(() {
+      _sub = "en train d'écrire…";
+      _typing = true;
+    });
+    _scrollDown();
+    await _sleep(_randInt(1400, 2200));
+    if (!mounted) return;
+    setState(() => _typing = false);
+    final frag = _deletedFragments[engine.arch.id] ?? '...';
+    _addMsg(_MsgKind.inn, engine.style(frag));
+    final idx = _msgs.length - 1;
+    await _sleep(_randInt(700, 1100));
+    if (!mounted) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _msgs[idx] = const _Msg(_MsgKind.deleted, ''));
+    await _sleep(_randInt(1200, 1800));
+  }
+
   Future<void> _askNext() async {
     if (_ended) return;
+    await _maybeDeletedMessage();
     final step = engine.nextStep();
     if (step == null) return _win();
     await _entitySay(step.text);
@@ -610,6 +649,30 @@ class _ChatScreenState extends State<ChatScreen> {
               alignment: Alignment.centerRight,
               child: Text(m.text,
                   style: const TextStyle(fontSize: 11, color: Palette.textDim))),
+        );
+      case _MsgKind.deleted:
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+            decoration: BoxDecoration(
+              border: Border.all(color: Palette.border),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.block, size: 14, color: Palette.textDim),
+                SizedBox(width: 6),
+                Text('Ce message a été supprimé',
+                    style: TextStyle(
+                        fontSize: 13.5,
+                        fontStyle: FontStyle.italic,
+                        color: Palette.textDim)),
+              ],
+            ),
+          ),
         );
       case _MsgKind.inn || _MsgKind.out:
         final isIn = m.kind == _MsgKind.inn;

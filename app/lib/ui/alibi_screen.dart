@@ -9,15 +9,18 @@ import 'palette.dart';
 class AlibiScreen extends StatefulWidget {
   final Alibi alibi;
   final VoidCallback onDone;
-  const AlibiScreen({super.key, required this.alibi, required this.onDone});
+
+  /// Temps avant effacement — les nuits difficiles en laissent moins.
+  final int seconds;
+  const AlibiScreen(
+      {super.key, required this.alibi, required this.onDone, this.seconds = 45});
 
   @override
   State<AlibiScreen> createState() => _AlibiScreenState();
 }
 
 class _AlibiScreenState extends State<AlibiScreen> {
-  static const int _seconds = 45;
-  int _left = _seconds;
+  late int _left = widget.seconds;
   Timer? _timer;
   bool _dissolving = false;
 

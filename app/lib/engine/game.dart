@@ -203,7 +203,15 @@ class GameEngine {
 
   String _qText(Creuse c) => arch.voice == 'C' ? c.qC : c.qA;
 
-  void startRun({Archetype? force}) {
+  /// Difficulté de la nuit (0-5), suit la série de survies du joueur.
+  int difficulty = 0;
+
+  /// Le joueur a déjà joué : l'entité s'en souvient dans son intro.
+  bool returning = false;
+
+  void startRun({Archetype? force, int difficulty = 0, bool returning = false}) {
+    this.difficulty = difficulty;
+    this.returning = returning;
     alibi = generateAlibi(rng);
     arch = force ?? pickArch();
     _lastArchId = arch.id;
@@ -234,10 +242,15 @@ class GameEngine {
   }
 
   void _buildQueue() {
-    // 2 zones d'ombre cachées par partie ; le Creux en prend une sensorielle
+    // 2 zones d'ombre cachées par partie (3 dès la difficulté 2) ;
+    // le Creux en prend une sensorielle
+    final extra = difficulty >= 2 ? 1 : 0;
     final s = arch.id == 'creux'
-        ? [..._shuffledList(sondes).take(1), ..._shuffledList(sondesCreux).take(1)]
-        : _shuffledList(sondes).take(2).toList();
+        ? [
+            ..._shuffledList(sondes).take(1 + extra),
+            ..._shuffledList(sondesCreux).take(1)
+          ]
+        : _shuffledList(sondes).take(2 + extra).toList();
     queue
       ..clear()
       ..addAll([
@@ -247,14 +260,17 @@ class GameEngine {
         Step(type: StepType.fact, kind: 'hArrivee', text: arch.qHArrivee),
         Step(type: StepType.fact, kind: 'transport', text: arch.qTransport, creuseFrom: 'transport'),
         Step(type: StepType.probe, p: s[1], text: _qText(s[1])),
+        if (s.length > 2) Step(type: StepType.probe, p: s[2], text: _qText(s[2])),
         Step(type: StepType.fact, kind: 'hRetour', text: arch.qHRetour),
         const Step(type: StepType.reprobeMarker), // remplacé au vol
       ]);
   }
 
   /// Re-vérifications construites à partir des improvisations verrouillées.
+  /// Les nuits difficiles en ajoutent une de plus.
   List<Step> _buildReprobes() {
-    final keys = _shuffledList(locks.keys.toList()).take(arch.maxReprobes);
+    final n = arch.maxReprobes + (difficulty >= 3 ? 1 : 0);
+    final keys = _shuffledList(locks.keys.toList()).take(n);
     return keys
         .map((k) => Step(
             type: StepType.reprobe,
@@ -497,7 +513,13 @@ class GameEngine {
         verdict: res.v);
   }
 
-  List<String> introLines() => _rand(arch.introVariants(alibi));
+  List<String> introLines() {
+    final lines = _rand(arch.introVariants(alibi));
+    if (returning && arch.returnLine.isNotEmpty) {
+      return [lines.first, arch.returnLine, ...lines.skip(1)];
+    }
+    return lines;
+  }
   List<String> winLines() => _rand(arch.winVariants(alibi));
   List<String> deathLines(String time) => arch.death(alibi, strikes, time);
 }

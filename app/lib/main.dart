@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'ai/ai_settings.dart';
 import 'ai/entity_voice.dart';
 import 'engine/game.dart';
+import 'meta/progress.dart';
 import 'ui/ai_settings_sheet.dart';
 import 'ui/alibi_screen.dart';
 import 'ui/chat_screen.dart';
@@ -73,6 +74,7 @@ class _GamePageState extends State<GamePage> {
   AiSettings? _aiSettings;
   EntityVoice _voice = const BankVoice();
   GemmaVoice? _gemma; // gardé chargé entre les parties (init coûteuse)
+  Progress _progress = Progress();
 
   @override
   void initState() {
@@ -83,6 +85,10 @@ class _GamePageState extends State<GamePage> {
       if (mounted) setState(() {});
     });
     _initAi();
+    Progress.load().then((p) {
+      _progress = p;
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _initAi() async {
@@ -154,12 +160,21 @@ class _GamePageState extends State<GamePage> {
 
   void _startRun() {
     Sfx.play('unlock', volume: 0.5);
-    _engine.startRun();
+    _engine.startRun(
+      difficulty: _progress.difficulty,
+      returning: _progress.nights > 0,
+    );
     setState(() {
       _runId++;
       _phase = Phase.alibi;
       _result = null;
     });
+  }
+
+  /// Temps de mémorisation de la note : 45 s, moins 5 s par niveau (min 30).
+  int get _alibiSeconds {
+    final d = _progress.difficulty > 3 ? 3 : _progress.difficulty;
+    return 45 - 5 * d;
   }
 
   Future<void> _playGlitch() async {
@@ -182,6 +197,8 @@ class _GamePageState extends State<GamePage> {
 
   void _onFinished(GameResult r) {
     if (!mounted) return;
+    _progress.recordRun(archId: _engine.arch.id, won: r.won);
+    _progress.save();
     setState(() {
       _result = r;
       _phase = Phase.end;
@@ -191,9 +208,18 @@ class _GamePageState extends State<GamePage> {
   @override
   Widget build(BuildContext context) {
     final screen = switch (_phase) {
-      Phase.lock => LockScreen(onUnlock: _startRun, onSettings: _openAiSettings),
+      Phase.lock => LockScreen(
+          onUnlock: _startRun,
+          onSettings: _openAiSettings,
+          notifBody: _progress.nights == 0
+              ? '1 nouveau message'
+              : (_progress.streak > 0
+                  ? 'Nuit n°${_progress.nights + 1}. On continue ?'
+                  : 'Je sais que tu vois ce message.'),
+        ),
       Phase.alibi => AlibiScreen(
           alibi: _engine.alibi,
+          seconds: _alibiSeconds,
           onDone: () => setState(() => _phase = Phase.chat),
         ),
       Phase.chat => ChatScreen(
@@ -205,7 +231,10 @@ class _GamePageState extends State<GamePage> {
           onGlitch: _playGlitch,
         ),
       Phase.end => EndScreen(
-          result: _result!, onReplay: _startRun, onSettings: _openAiSettings),
+          result: _result!,
+          progress: _progress,
+          onReplay: _startRun,
+          onSettings: _openAiSettings),
     };
 
     Widget phone = Column(children: [

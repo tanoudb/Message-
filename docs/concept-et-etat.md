@@ -85,6 +85,21 @@ Le prototype HTML (`index.html`) reste en contenu v3 : l'app Flutter est désorm
 - ✅ **Flutter tranché** et portage Android fait (`app/`) : moteur v3 complet en Dart pur (`app/lib/engine/`), UI native (`app/lib/ui/`) — écran verrouillé, note d'alibi qui se dissout, conversation avec indicateur de frappe, les 4 mises en scène de mort, vibration réelle, batterie réelle via `battery_plus`, mode plein écran immersif. 23 tests (`flutter test`), dont 100 parties complètes simulées ; APK debug compilé avec succès.
 - 🔄 v3 HTML et app Flutter à tester sur appareil.
 
+### Méta-progression : les « nuits » (v1.3)
+
+Le cœur de la rejouabilité. Chaque partie est une **nuit numérotée**, et la progression est persistante (survit à la fermeture de l'app).
+
+- **Série de survies (streak)** et **record** : survivre allonge la série, mourir la remet à zéro — le record, lui, reste. C'est la boucle « encore une », comme un score à battre.
+- **Difficulté progressive** pilotée par la série (niveau 0 à 5, plafonné) : la note d'alibi s'efface plus vite (45 s → 30 s), une **zone d'ombre supplémentaire** est sondée dès le niveau 2, une **re-vérification de plus** dès le niveau 3, et les entités impatientes relancent plus tôt. Plus on gagne, plus c'est dur — et plus la chute coûte cher.
+- **Dossier des entités** : cinq pastilles sur l'écran de fin, grisées tant que l'entité n'a pas été rencontrée, cerclées de vert une fois vaincue. Le Miroir étant rare (~1/10), compléter le dossier demande des dizaines de nuits. Le texte sous les pastilles s'adapte : « Quelque chose ne t'a pas encore parlé. » → « Tu as survécu aux cinq. Elles le savent. »
+- **L'entité se souvient** : dès la deuxième nuit, elle glisse une réplique de retour dans son intro (« Dossier rouvert. Ce n'est pas notre première conversation. », « tu es revenu 🙂 je savais. tu reviens toujours. »).
+- **La notification de l'écran verrouillé change** selon l'état : « 1 nouveau message » la première fois, puis « Nuit n°7. On continue ? » ou « Je sais que tu vois ce message. » après une mort.
+
+### Réalisme (v1.3)
+
+- **Message supprimé** : une fois par nuit au maximum, l'entité laisse échapper un fragment (« derrière toi il y a », « je suis déjà venue devant chez ») aussitôt remplacé par *« Ce message a été supprimé »*. Le joueur ne connaîtra jamais la fin de la phrase.
+- **Nouvelles zones d'ombre** dont une qui **invente un fait** sur le joueur — « Ton téléphone a été injoignable entre 21h et 23h. Explique. » — plus le témoin qui peut confirmer, ce qu'il a fait en rentrant, qui il a croisé, et la température des lieux pour le Creux.
+
 ### Intelligence du moteur (v1.2)
 
 - **Écoute globale** : une contradiction est relevée où qu'elle apparaisse — répondre « vers 19h en sortant du bar » à une question d'horaire contredit le lieu de l'alibi, même si l'heure est bonne.

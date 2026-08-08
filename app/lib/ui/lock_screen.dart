@@ -7,7 +7,14 @@ import 'palette.dart';
 class LockScreen extends StatefulWidget {
   final VoidCallback onUnlock;
   final VoidCallback? onSettings;
-  const LockScreen({super.key, required this.onUnlock, this.onSettings});
+
+  /// Corps de la notification — varie selon la progression du joueur.
+  final String notifBody;
+  const LockScreen(
+      {super.key,
+      required this.onUnlock,
+      this.onSettings,
+      this.notifBody = '1 nouveau message'});
 
   @override
   State<LockScreen> createState() => _LockScreenState();
@@ -74,8 +81,8 @@ class _LockScreenState extends State<LockScreen> {
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Row(
+                        children: [
+                          const Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text('MESSAGES',
@@ -84,12 +91,13 @@ class _LockScreenState extends State<LockScreen> {
                                   style: TextStyle(fontSize: 12, color: Palette.textDim)),
                             ],
                           ),
-                          SizedBox(height: 4),
-                          Text('Numéro inconnu',
+                          const SizedBox(height: 4),
+                          const Text('Numéro inconnu',
                               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                          SizedBox(height: 2),
-                          Text('1 nouveau message',
-                              style: TextStyle(fontSize: 14, color: Color(0xFFCFD2DA))),
+                          const SizedBox(height: 2),
+                          Text(widget.notifBody,
+                              style: const TextStyle(
+                                  fontSize: 14, color: Color(0xFFCFD2DA))),
                         ],
                       ),
                     ),

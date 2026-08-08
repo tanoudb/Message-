@@ -80,6 +80,10 @@ class Archetype {
   final String deathTitle;
   final String deathSub;
 
+  /// Ajoutée en tête d'intro quand le joueur a déjà joué : l'entité se
+  /// souvient de lui d'une nuit à l'autre.
+  final String returnLine;
+
   const Archetype({
     required this.id,
     required this.nom,
@@ -110,6 +114,7 @@ class Archetype {
     this.deathStyle = DeathStyle.glitch,
     required this.deathTitle,
     required this.deathSub,
+    this.returnLine = '',
   });
 }
 
@@ -251,6 +256,7 @@ final Archetype archiviste = Archetype(
   ],
   deathTitle: 'DOSSIER CLOS',
   deathSub: "L'Archiviste n'a besoin que d'une incohérence. Tu lui en as donné davantage.",
+  returnLine: "Dossier rouvert. Ce n'est pas notre première conversation.",
 );
 
 /* =====================================================================
@@ -395,6 +401,7 @@ final Archetype confidente = Archetype(
   ],
   deathTitle: 'ELLE ARRIVE',
   deathSub: 'La Confidente pardonne les faits. Jamais le ton. Tu as cessé d\'être « toi » — et elle l\'a senti.',
+  returnLine: "tu es revenu 🙂 je savais. tu reviens toujours.",
 );
 
 /* =====================================================================
@@ -522,6 +529,7 @@ final Archetype metronome = Archetype(
   deathStyle: DeathStyle.flood,
   deathTitle: 'HORS TEMPO',
   deathSub: "Le Métronome mesure tout. Trop lent, c'est inventé. Trop rapide, c'est récité. Tu étais les deux.",
+  returnLine: "encore toi. le chrono reprend où on l'avait laissé.",
 );
 
 /// Messages du flood de mort du Métronome (joués par l'UI)
@@ -611,6 +619,7 @@ final Archetype creux = Archetype(
   deathStyle: DeathStyle.silence,
   deathTitle: 'LE CREUX',
   deathSub: "Il n'accuse pas. Il constate. Et il n'a eu besoin que de ton téléphone.",
+  returnLine: "te revoilà.",
 );
 
 /* =====================================================================
@@ -722,6 +731,7 @@ final Archetype miroir = Archetype(
   deathStyle: DeathStyle.echo,
   deathTitle: 'MOT POUR MOT',
   deathSub: "Le Miroir n'avait pas besoin de te piéger. Tu lui as donné tous ses mots.",
+  returnLine: "je savais que tu reviendrais. moi aussi, je reviens toujours.",
 );
 
 final List<Archetype> allArchetypes = [archiviste, confidente, metronome, creux, miroir];

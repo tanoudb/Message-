@@ -221,6 +221,17 @@ const List<Creuse> sondes = [
       'Quel temps faisait-il ?', 'il faisait quel temps hier soir ?'),
   Creuse('avant_dormir', 'la dernière chose faite avant de dormir',
       'La dernière chose que tu as faite avant de dormir. Dis-la.', 'et juste avant de dormir, t\'as fait quoi ?'),
+  Creuse('tel_eteint', 'ton téléphone éteint entre 21h et 23h',
+      'Ton téléphone a été injoignable entre 21h et 23h. Explique.',
+      "j'ai essayé de t'appeler hier soir. injoignable. pourquoi ? 🙂"),
+  Creuse('temoin', 'qui peut confirmer t\'avoir vu',
+      "Qui peut confirmer t'avoir vu là-bas ? Un nom.",
+      "et qui t'a vu là-bas ? donne-moi un nom 🙂"),
+  Creuse('en_rentrant', 'ce que tu as fait juste en rentrant',
+      "Qu'as-tu fait immédiatement en rentrant ?",
+      "et en rentrant, t'as fait quoi direct ?"),
+  Creuse('croise', 'qui tu as croisé sur le trajet',
+      'Sur le trajet. Qui as-tu croisé ?', "t'as croisé quelqu'un en chemin ?"),
 ];
 
 /// Sondes sensorielles — réservées au Creux
@@ -229,6 +240,8 @@ const List<Creuse> sondesCreux = [
       "ferme les yeux. qu'est-ce que tu entendais, là-bas ?", "qu'est-ce que tu entendais ?"),
   Creuse('odeur', "l'odeur de l'endroit", 'ça sentait quoi ?', 'ça sentait quoi ?'),
   Creuse('lumiere', "la lumière de l'endroit", 'la lumière. décris-la.', 'la lumière ?'),
+  Creuse('temperature', 'la température là-bas',
+      'il faisait chaud, là-bas ? ou froid.', 'chaud ou froid ?'),
 ];
 
 Alibi generateAlibi(Random rng) {
