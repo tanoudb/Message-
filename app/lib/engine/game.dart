@@ -331,6 +331,27 @@ class GameEngine {
     return const EvalResult(Verdict.good);
   }
 
+  /// Aveux explicites de mensonge — quel que soit le sujet en cours.
+  static const List<String> _confessions = [
+    'j ai menti', 'je mens', 'j invente', 'je viens d inventer',
+    'j ai tout invente', 'c est faux ce que j ai dit', 'je te mens',
+  ];
+
+  /// Contradiction glissée dans une réponse à une AUTRE question :
+  /// l'entité écoute tout, pas seulement le sujet en cours.
+  String? crossContradiction(String? kind, String text) {
+    if (kind != 'lieu' && affirmsAny(text, alibi.lieu.incompat)) {
+      return "lieu contredit au détour d'une réponse (« ${alibi.lieu.canon} » attendu)";
+    }
+    if (kind != 'detail' && affirmsAny(text, alibi.detail.incompat)) {
+      return "détail contredit au détour d'une réponse (« ${alibi.detail.canon} » attendu)";
+    }
+    if (kind != 'transport' && affirmsAny(text, alibi.transport.incompat)) {
+      return "trajet contredit au détour d'une réponse (« ${alibi.transport.canon} » attendu)";
+    }
+    return null;
+  }
+
   EvalResult evalReprobe(Step step, String answer) {
     final lock = locks[step.key]!;
     final w = contentWords(answer);
@@ -382,11 +403,22 @@ class GameEngine {
       reactions.add(pickReact('fast'));
     }
 
-    final res = switch (step.type) {
+    var res = switch (step.type) {
       StepType.fact => evalFact(step.kind!, text),
       StepType.probe => evalProbe(step, text),
       _ => evalReprobe(step, text),
     };
+
+    // Aveu de mensonge : prime sur tout le reste.
+    if (hasAny(text, _confessions)) {
+      res = const EvalResult(Verdict.contradiction, 'aveu de mensonge');
+    }
+    // Contradiction glissée dans une réponse à une autre question.
+    if (res.v != Verdict.contradiction) {
+      final cross = crossContradiction(
+          step.type == StepType.fact ? step.kind : null, text);
+      if (cross != null) res = EvalResult(Verdict.contradiction, cross);
+    }
 
     if (res.v == Verdict.unsure && !retried) {
       // Pas compris → relance sans pénalité. Même question, 2e chance.
@@ -420,6 +452,8 @@ class GameEngine {
           locks[step.p!.key] = Lock(step.p!.label, contentWords(text));
         }
       case Verdict.good:
+        // Une réponse solide rassure un peu l'entité : la constance paie.
+        suspicion = suspicion > 3 ? suspicion - 3 : 0;
         // Le Miroir renvoie parfois la réponse du joueur, mot pour mot
         if (arch.echoChance > 0 && rng.nextDouble() < arch.echoChance) {
           reactions.add('« $text »');

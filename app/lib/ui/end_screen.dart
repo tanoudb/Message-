@@ -16,10 +16,16 @@ class EndScreen extends StatelessWidget {
     return Container(
       color: Colors.black,
       padding: const EdgeInsets.all(32),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+      child: TweenAnimationBuilder<double>(
+        // le verdict apparaît lentement dans le noir
+        tween: Tween(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 1400),
+        curve: Curves.easeOut,
+        builder: (context, v, child) => Opacity(opacity: v, child: child),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
             Text(
               r.won ? 'Tu as survécu.' : r.deathTitle,
               textAlign: TextAlign.center,
@@ -84,13 +90,14 @@ class EndScreen extends StatelessWidget {
                 ),
               ),
             ),
-            if (onSettings != null)
-              TextButton(
-                onPressed: onSettings,
-                child: const Text('Réglages IA',
-                    style: TextStyle(fontSize: 13, color: Palette.textDim)),
-              ),
-          ],
+              if (onSettings != null)
+                TextButton(
+                  onPressed: onSettings,
+                  child: const Text('Réglages',
+                      style: TextStyle(fontSize: 13, color: Palette.textDim)),
+                ),
+            ],
+          ),
         ),
       ),
     );

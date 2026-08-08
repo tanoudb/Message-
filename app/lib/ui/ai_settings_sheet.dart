@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../ai/ai_settings.dart';
 import 'palette.dart';
+import 'sfx.dart';
 
 /// Feuille de réglages de l'IA locale, accessible depuis l'écran verrouillé
 /// et l'écran de fin.
@@ -92,8 +93,20 @@ class _AiSettingsSheetState extends State<AiSettingsSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('IA locale',
+              const Text('Réglages',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Sons', style: TextStyle(fontSize: 15)),
+                value: Sfx.enabled,
+                onChanged: (v) async {
+                  await Sfx.setEnabled(v);
+                  if (mounted) setState(() {});
+                },
+              ),
+              const Divider(height: 16, color: Palette.border),
+              const Text('IA locale',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               const Text(
                 "Avec un modèle installé, l'entité écrit ses propres messages et "

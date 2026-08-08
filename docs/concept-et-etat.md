@@ -85,6 +85,17 @@ Le prototype HTML (`index.html`) reste en contenu v3 : l'app Flutter est désorm
 - ✅ **Flutter tranché** et portage Android fait (`app/`) : moteur v3 complet en Dart pur (`app/lib/engine/`), UI native (`app/lib/ui/`) — écran verrouillé, note d'alibi qui se dissout, conversation avec indicateur de frappe, les 4 mises en scène de mort, vibration réelle, batterie réelle via `battery_plus`, mode plein écran immersif. 23 tests (`flutter test`), dont 100 parties complètes simulées ; APK debug compilé avec succès.
 - 🔄 v3 HTML et app Flutter à tester sur appareil.
 
+### Intelligence du moteur (v1.2)
+
+- **Écoute globale** : une contradiction est relevée où qu'elle apparaisse — répondre « vers 19h en sortant du bar » à une question d'horaire contredit le lieu de l'alibi, même si l'heure est bonne.
+- **Aveux détectés** : « j'ai menti », « j'invente »... = contradiction immédiate.
+- **La constance paie** : chaque bonne réponse fait légèrement redescendre la suspicion (plancher 0) — tenir son récit rattrape un début hésitant.
+
+### Son et retour haptique (v1.2)
+
+- **Effets sonores générés procéduralement** (aucun asset externe, WAV synthétisés) : réception, envoi, déverrouillage, glitch haché, drone grave de mort (battement 55/57,3 Hz). Coupables dans Réglages → Sons.
+- **Haptique différenciée** : clic discret à l'envoi, impact léger à la réception, impact moyen sur contradiction relevée, impact fort sur l'avertissement de l'entité, vibration longue + double impact pendant la mort.
+
 ### Expérience (app Flutter)
 
 - **Lancement noir** : splash et fond de fenêtre noirs — aucun flash blanc, l'app se comporte comme un écran de téléphone du début à la fin. Icône de launcher dédiée (bulle « en train d'écrire » + pastille rouge, icône adaptative Android).

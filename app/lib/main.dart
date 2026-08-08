@@ -13,12 +13,14 @@ import 'ui/chat_screen.dart';
 import 'ui/end_screen.dart';
 import 'ui/lock_screen.dart';
 import 'ui/palette.dart';
+import 'ui/sfx.dart';
 import 'ui/status_bar.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // Immersif : le jeu EST le téléphone, pas de vraie barre système
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  Sfx.load();
   runApp(const MessagesApp());
 }
 
@@ -151,6 +153,7 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _startRun() {
+    Sfx.play('unlock', volume: 0.5);
     _engine.startRun();
     setState(() {
       _runId++;
@@ -161,6 +164,7 @@ class _GamePageState extends State<GamePage> {
 
   Future<void> _playGlitch() async {
     HapticFeedback.heavyImpact();
+    Sfx.play('glitch', volume: 0.7);
     for (var i = 0; i < 7; i++) {
       if (!mounted) return;
       setState(() => _glitch = true);

@@ -8,6 +8,7 @@ import '../ai/entity_voice.dart';
 import '../engine/archetypes.dart';
 import '../engine/game.dart';
 import 'palette.dart';
+import 'sfx.dart';
 import 'typing_indicator.dart';
 
 /// Résultat d'une partie, transmis à l'écran de fin.
@@ -118,7 +119,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _addMsg(_MsgKind kind, String text) {
     if (!mounted) return;
-    if (kind == _MsgKind.inn) HapticFeedback.lightImpact();
+    if (kind == _MsgKind.inn) {
+      HapticFeedback.lightImpact();
+      Sfx.play('receive', volume: 0.5);
+    }
     setState(() => _msgs.add(_Msg(kind, text)));
     _scrollDown();
   }
@@ -319,6 +323,8 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.isEmpty) return;
     _inputCtrl.clear();
     _clearNudge();
+    HapticFeedback.selectionClick();
+    Sfx.play('send', volume: 0.45);
     _addMsg(_MsgKind.out, text);
     _lastPlayerText = text;
     await _deliverAndRead(text);
@@ -362,8 +368,15 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
 
+      // retour haptique selon la gravité du verdict
+      if (outcome.verdict == Verdict.contradiction) {
+        HapticFeedback.mediumImpact();
+      }
       await _sayVoicedAll(outcome.reactions, intent: _intentFor(outcome.verdict));
-      if (outcome.warned) await _entitySay(engine.arch.warn);
+      if (outcome.warned) {
+        HapticFeedback.heavyImpact();
+        await _entitySay(engine.arch.warn);
+      }
       await _askNext();
     } finally {
       _handling = false;
@@ -387,6 +400,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _death() async {
     _clearNudge();
+    HapticFeedback.vibrate();
+    Sfx.play('drone', volume: 0.6);
     await _entitySayAll(engine.deathLines(fmtTime()));
     switch (engine.arch.deathStyle) {
       case DeathStyle.flood:
@@ -492,19 +507,29 @@ class _ChatScreenState extends State<ChatScreen> {
         ]),
       ),
       Expanded(
-        child: ListView.builder(
-          controller: _scrollCtrl,
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
-          itemCount: _msgs.length + (_typing ? 1 : 0),
-          itemBuilder: (context, i) {
-            if (i == _msgs.length) {
-              return const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                      padding: EdgeInsets.only(top: 3), child: TypingIndicator()));
-            }
-            return _bubble(_msgs[i]);
-          },
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Palette.bg, Color(0xFF0D0E12), Color(0xFF0A0B0E)],
+            ),
+          ),
+          child: ListView.builder(
+            controller: _scrollCtrl,
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
+            itemCount: _msgs.length + (_typing ? 1 : 0),
+            itemBuilder: (context, i) {
+              if (i == _msgs.length) {
+                return const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                        padding: EdgeInsets.only(top: 3),
+                        child: TypingIndicator()));
+              }
+              return _bubble(i);
+            },
+          ),
         ),
       ),
       SafeArea(
@@ -568,7 +593,8 @@ class _ChatScreenState extends State<ChatScreen> {
     ]);
   }
 
-  Widget _bubble(_Msg m) {
+  Widget _bubble(int i) {
+    final m = _msgs[i];
     switch (m.kind) {
       case _MsgKind.sys:
         return Padding(
@@ -587,23 +613,29 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       case _MsgKind.inn || _MsgKind.out:
         final isIn = m.kind == _MsgKind.inn;
+        // groupage : les messages consécutifs du même côté se resserrent,
+        // seule la dernière bulle d'une série garde sa « queue »
+        final prevSame = i > 0 && _msgs[i - 1].kind == m.kind;
+        final nextSame = i + 1 < _msgs.length && _msgs[i + 1].kind == m.kind;
+        final tail = !nextSame;
         return Align(
           alignment: isIn ? Alignment.centerLeft : Alignment.centerRight,
           child: Container(
-            margin: const EdgeInsets.only(top: 3),
+            margin: EdgeInsets.only(top: prevSame ? 2 : 8),
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
             constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.78),
             decoration: BoxDecoration(
               color: isIn ? Palette.bubbleIn : Palette.bubbleOut,
               borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(18),
-                topRight: const Radius.circular(18),
-                bottomLeft: Radius.circular(isIn ? 5 : 18),
-                bottomRight: Radius.circular(isIn ? 18 : 5),
+                topLeft: Radius.circular(isIn && prevSame ? 8 : 18),
+                topRight: Radius.circular(!isIn && prevSame ? 8 : 18),
+                bottomLeft: Radius.circular(isIn && tail ? 5 : 18),
+                bottomRight: Radius.circular(!isIn && tail ? 5 : 18),
               ),
             ),
-            child: Text(m.text, style: const TextStyle(fontSize: 15.5, height: 1.35)),
+            child: Text(m.text,
+                style: const TextStyle(fontSize: 15.5, height: 1.35)),
           ),
         );
     }

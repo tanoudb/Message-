@@ -287,6 +287,45 @@ void main() {
       expect(e.current, isNotNull); // même question toujours en cours
     });
 
+    test("contradiction glissée dans une réponse à une autre question", () {
+      final e = GameEngine(rng: Random(41));
+      e.startRun(force: archiviste);
+      e.alibi = Alibi(
+          prenom: 'Test',
+          metier: 'test',
+          lieu: lieux[0], // cinéma (incompat : bar, resto...)
+          detail: lieux[0].details[0],
+          transport: transports[0],
+          hArrivee: 19,
+          hRetour: 22);
+      e.current = const Step(type: StepType.fact, kind: 'hArrivee', text: 'q');
+      // l'heure est bonne, mais « en sortant du bar » contredit le lieu
+      final out =
+          e.submitAnswer('vers 19h en sortant du bar', elapsedMs: 5000);
+      expect(out.verdict, Verdict.contradiction);
+      expect(e.strikes.single, contains('au détour'));
+    });
+
+    test('aveu de mensonge = contradiction immédiate', () {
+      final e = GameEngine(rng: Random(43));
+      e.startRun(force: archiviste);
+      e.current = const Step(type: StepType.fact, kind: 'lieu', text: 'q');
+      final out = e.submitAnswer("bon ok j'ai menti", elapsedMs: 5000);
+      expect(out.verdict, Verdict.contradiction);
+      expect(e.strikes.single, 'aveu de mensonge');
+    });
+
+    test('une bonne réponse fait légèrement redescendre la suspicion', () {
+      final e = GameEngine(rng: Random(45));
+      e.startRun(force: archiviste);
+      e.suspicion = 10;
+      e.current = const Step(type: StepType.fact, kind: 'lieu', text: 'q');
+      final out = e.submitAnswer(
+          "j'étais ${e.alibi.lieu.syn[0]}", elapsedMs: 5000);
+      expect(out.verdict, Verdict.good);
+      expect(e.suspicion, 7);
+    });
+
     test('style : le Métronome écrit en minuscules', () {
       final e = GameEngine(rng: Random(13));
       e.startRun(force: metronome);
