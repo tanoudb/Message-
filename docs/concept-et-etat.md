@@ -85,8 +85,15 @@ Le prototype HTML (`index.html`) reste en contenu v3 : l'app Flutter est désorm
 - ✅ **Flutter tranché** et portage Android fait (`app/`) : moteur v3 complet en Dart pur (`app/lib/engine/`), UI native (`app/lib/ui/`) — écran verrouillé, note d'alibi qui se dissout, conversation avec indicateur de frappe, les 4 mises en scène de mort, vibration réelle, batterie réelle via `battery_plus`, mode plein écran immersif. 23 tests (`flutter test`), dont 100 parties complètes simulées ; APK debug compilé avec succès.
 - 🔄 v3 HTML et app Flutter à tester sur appareil.
 
+### Expérience (app Flutter)
+
+- **Lancement noir** : splash et fond de fenêtre noirs — aucun flash blanc, l'app se comporte comme un écran de téléphone du début à la fin. Icône de launcher dédiée (bulle « en train d'écrire » + pastille rouge, icône adaptative Android).
+- **Messagerie crédible** : accusé « Distribué » qui devient « Lu à HH:MM », temps de lecture de l'entité proportionnel à la longueur du message du joueur, vibration légère à chaque message reçu.
+- **Frappe vivante** : l'entité peut commencer à écrire, s'arrêter, reprendre (probabilité par archétype — le Creux hésite beaucoup, le Métronome jamais). Pendant les silences du Creux, son statut passe « hors ligne ».
+- **CI** : GitHub Action qui teste, compile et publie les APK dans la release `apk-latest` à chaque push.
+
 **Reste à faire :**
-- Tester l'app Flutter sur un vrai téléphone Android (rythme, clavier, vibrations)
+- Tester l'app Flutter sur un vrai téléphone Android (rythme, clavier, vibrations, inférence IA locale)
 - Ajuster l'équilibrage des 3 nouveaux archétypes, en particulier les fenêtres de temps du Métronome
 - Intégrer les retours de test v2 d'Ethan s'il en reste de non couverts
 - Étoffer encore les banques : plus d'alibis, de lieux, de détails, de questions de creusement par archétype

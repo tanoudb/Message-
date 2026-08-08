@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../ai/entity_voice.dart';
 import '../engine/archetypes.dart';
@@ -35,6 +37,16 @@ class _Msg {
   final String text;
   const _Msg(this.kind, this.text);
 }
+
+/// Probabilité que l'entité « hésite » : commence à écrire, s'arrête,
+/// puis reprenne. Le Creux hésite beaucoup, le Métronome jamais.
+const Map<String, double> _hesitation = {
+  'archiviste': 0.05,
+  'confidente': 0.15,
+  'metronome': 0.0,
+  'creux': 0.35,
+  'miroir': 0.2,
+};
 
 class ChatScreen extends StatefulWidget {
   final GameEngine engine;
@@ -106,11 +118,51 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _addMsg(_MsgKind kind, String text) {
     if (!mounted) return;
+    if (kind == _MsgKind.inn) HapticFeedback.lightImpact();
     setState(() => _msgs.add(_Msg(kind, text)));
     _scrollDown();
   }
 
+  /// « Distribué », puis « Lu à HH:MM », puis un temps de lecture
+  /// proportionnel à la longueur du message — comme une vraie messagerie.
+  Future<void> _deliverAndRead(String text) async {
+    _addMsg(_MsgKind.receipt, 'Distribué');
+    final idx = _msgs.length - 1;
+    await _sleep(_randInt(500, 1400));
+    if (!mounted) return;
+    setState(() => _msgs[idx] = _Msg(_MsgKind.receipt, 'Lu à ${fmtTime()}'));
+    await _sleep(200 + math.min(text.length * 10, 1200));
+  }
+
+  /// L'entité commence parfois à écrire, s'arrête, puis reprend.
+  Future<void> _maybeHesitate() async {
+    final p = _hesitation[engine.arch.id] ?? 0;
+    if (engine.rng.nextDouble() >= p || _ended || !mounted) return;
+    setState(() {
+      _sub = "en train d'écrire…";
+      _typing = true;
+    });
+    _scrollDown();
+    await _sleep(_randInt(800, 1600));
+    if (!mounted) return;
+    setState(() {
+      _typing = false;
+      _sub = 'en ligne';
+    });
+    await _sleep(_randInt(600, 1200));
+  }
+
+  /// Un temps de silence. Le Creux « disparaît » pendant les siens.
+  Future<void> _silence() async {
+    final isCreux = engine.arch.id == 'creux';
+    if (isCreux && mounted) setState(() => _sub = 'hors ligne');
+    await _sleep(_randInt(900, 1600));
+    if (isCreux && mounted) setState(() => _sub = 'en ligne');
+  }
+
   Future<void> _entitySay(String text) async {
+    if (_ended || !mounted) return;
+    await _maybeHesitate();
     if (_ended || !mounted) return;
     setState(() {
       _sub = "en train d'écrire…";
@@ -133,7 +185,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (t.isNotEmpty) {
         await _entitySay(t);
       } else {
-        await _sleep(_randInt(900, 1600));
+        await _silence();
       }
     }
   }
@@ -169,9 +221,11 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _sayVoiced(String base, {required String intent}) async {
     if (_ended || !mounted) return;
     if (base.isEmpty) {
-      await _sleep(_randInt(900, 1600));
+      await _silence();
       return;
     }
+    await _maybeHesitate();
+    if (_ended || !mounted) return;
     setState(() {
       _sub = "en train d'écrire…";
       _typing = true;
@@ -267,8 +321,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _clearNudge();
     _addMsg(_MsgKind.out, text);
     _lastPlayerText = text;
-    await _sleep(_randInt(350, 800));
-    _addMsg(_MsgKind.receipt, 'Lu à ${fmtTime()}');
+    await _deliverAndRead(text);
 
     if (_handling || engine.current == null) {
       // message hors question (ou entité en train de réagir) : avec l'IA
@@ -473,6 +526,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   maxLines: 4,
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _submit(),
+                  // garde la conversation en bas quand le clavier s'ouvre
+                  onTap: () => Future.delayed(
+                      const Duration(milliseconds: 350), _scrollDown),
                   style: const TextStyle(fontSize: 15.5),
                   decoration: const InputDecoration(
                     hintText: 'Message',

@@ -6,6 +6,8 @@ Le jeu simule l'interface d'un smartphone : écran verrouillé (heure et batteri
 
 ## Jouer
 
+**Télécharger l'APK** : chaque push compile automatiquement l'app ([Actions](../../actions)) et publie les APK dans la release [`apk-latest`](../../releases/tag/apk-latest). Prendre `app-arm64-v8a-release.apk` pour un téléphone récent.
+
 **App Android (Flutter)** — la version de référence :
 
 ```bash
