@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Messages</title>
+<style>
+  :root{
+    --bg:#0b0c0f; --surface:#15171c; --bubble-in:#24262e; --bubble-out:#1c4fd6;
+    --text:#e8eaef; --text-dim:#8b8f9a; --danger:#ff5252; --ok:#43d17a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;}
+  body{background:#000;color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  #phone{position:relative;width:100%;height:100%;max-width:430px;max-height:932px;
+    background:var(--bg);display:flex;flex-direction:column;overflow:hidden;}
+  @media(min-width:500px){#phone{border-radius:24px;border:1px solid #23252c;height:92vh;}}
+
+  #statusbar{display:flex;justify-content:space-between;align-items:center;
+    padding:10px 16px 6px;font-size:13px;font-weight:600;flex-shrink:0;user-select:none;}
+  #sb-batt{display:inline-flex;align-items:center;gap:4px;font-weight:500;}
+  .batt-icon{width:22px;height:11px;border:1px solid var(--text-dim);border-radius:3px;position:relative;padding:1px;}
+  .batt-icon::after{content:"";position:absolute;right:-3px;top:3px;width:2px;height:5px;background:var(--text-dim);border-radius:0 1px 1px 0;}
+  .batt-fill{height:100%;background:var(--text);border-radius:1px;}
+
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;background:var(--bg);}
+  .screen.active{display:flex;}
+  .screen .pad-top{height:34px;flex-shrink:0;}
+
+  #screen-lock{align-items:center;justify-content:center;text-align:center;background:#000;}
+  #lock-time{font-size:76px;font-weight:200;letter-spacing:-2px;}
+  #lock-date{font-size:16px;color:var(--text-dim);margin-top:4px;text-transform:capitalize;}
+  #lock-hint{position:absolute;bottom:56px;font-size:14px;color:var(--text-dim);animation:pulse 2.4s ease-in-out infinite;}
+  #lock-notif{margin-top:48px;background:rgba(255,255,255,.07);backdrop-filter:blur(8px);
+    border-radius:16px;padding:12px 16px;width:86%;max-width:340px;text-align:left;
+    opacity:0;transform:translateY(8px);transition:all .6s ease;}
+  #lock-notif.show{opacity:1;transform:none;}
+  #lock-notif .n-app{font-size:12px;color:var(--text-dim);display:flex;justify-content:space-between;}
+  #lock-notif .n-title{font-size:14px;font-weight:600;margin-top:4px;}
+  #lock-notif .n-body{font-size:14px;color:#cfd2da;margin-top:2px;}
+  @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+  #screen-alibi{padding:0 0 20px;}
+  #alibi-head{padding:8px 20px 12px;border-bottom:1px solid #1d1f26;flex-shrink:0;}
+  #alibi-head .app-name{font-size:13px;color:#e8b64c;font-weight:600;letter-spacing:.5px;}
+  #alibi-head h1{font-size:22px;font-weight:700;margin-top:6px;}
+  #alibi-head .meta{font-size:12px;color:var(--text-dim);margin-top:2px;}
+  #alibi-body{flex:1;overflow-y:auto;padding:16px 20px;font-size:15.5px;line-height:1.55;}
+  #alibi-body p{margin-bottom:12px;}
+  #alibi-body .warn{color:#e8b64c;font-size:14px;margin-top:18px;}
+  #alibi-body .warn2{color:var(--text-dim);font-size:13px;font-style:italic;margin-top:10px;}
+  #alibi-foot{padding:12px 20px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;}
+  #alibi-timer{font-size:12px;color:var(--text-dim);text-align:center;}
+  .btn{appearance:none;border:none;border-radius:14px;padding:15px;width:100%;
+    background:var(--surface);color:var(--text);font-size:16px;font-weight:600;cursor:pointer;}
+  .btn.primary{background:#2a2d36;}
+  .deleting{animation:dissolve .9s ease forwards;}
+  @keyframes dissolve{0%{opacity:1;filter:blur(0)}60%{opacity:.5;filter:blur(2px)}
+    100%{opacity:0;filter:blur(10px);transform:scale(.98)}}
+
+  #chat-head{display:flex;align-items:center;gap:12px;padding:8px 16px 12px;
+    border-bottom:1px solid #1d1f26;flex-shrink:0;}
+  #chat-avatar{width:38px;height:38px;border-radius:50%;background:#2c2f38;
+    display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--text-dim);}
+  #chat-name{font-size:16px;font-weight:600;}
+  #chat-sub{font-size:12px;color:var(--text-dim);}
+  #chat-log{flex:1;overflow-y:auto;padding:14px 14px 6px;display:flex;flex-direction:column;gap:3px;}
+  .msg{max-width:78%;padding:9px 13px;border-radius:18px;font-size:15.5px;line-height:1.35;
+    word-wrap:break-word;white-space:pre-wrap;animation:pop .18s ease;}
+  .msg.in{align-self:flex-start;background:var(--bubble-in);border-bottom-left-radius:5px;}
+  .msg.out{align-self:flex-end;background:var(--bubble-out);border-bottom-right-radius:5px;}
+  .msg.sys{align-self:center;background:none;color:var(--text-dim);font-size:12px;padding:6px 0;}
+  .receipt{align-self:flex-end;font-size:11px;color:var(--text-dim);padding:0 6px 6px;}
+  @keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+  #typing{align-self:flex-start;background:var(--bubble-in);border-radius:18px;border-bottom-left-radius:5px;
+    padding:12px 15px;display:none;gap:4px;}
+  #typing.show{display:flex;}
+  #typing i{width:7px;height:7px;border-radius:50%;background:var(--text-dim);animation:tp 1.2s infinite;}
+  #typing i:nth-child(2){animation-delay:.15s}
+  #typing i:nth-child(3){animation-delay:.3s}
+  @keyframes tp{0%,60%,100%{transform:none;opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+  #chat-input{display:flex;align-items:flex-end;gap:8px;padding:8px 12px 14px;flex-shrink:0;}
+  #inp{flex:1;background:var(--surface);border:1px solid #23252c;border-radius:20px;
+    color:var(--text);font-size:15.5px;font-family:inherit;padding:11px 15px;resize:none;
+    max-height:110px;outline:none;}
+  #send{width:42px;height:42px;border-radius:50%;border:none;background:var(--bubble-out);
+    color:#fff;font-size:17px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  #send:disabled{opacity:.35;}
+
+  #screen-end{align-items:center;justify-content:center;text-align:center;padding:32px;background:#000;}
+  #end-title{font-size:26px;font-weight:700;margin-bottom:10px;}
+  #end-sub{font-size:15px;color:var(--text-dim);line-height:1.5;margin-bottom:8px;max-width:300px;}
+  #end-report{font-size:13px;color:var(--text-dim);line-height:1.6;margin:14px 0 24px;max-width:320px;text-align:left;
+    background:var(--surface);border-radius:12px;padding:14px;display:none;}
+  #screen-end .btn{max-width:300px;}
+
+  .glitch{animation:glitch .12s steps(2) 14;}
+  @keyframes glitch{0%{filter:invert(0)}50%{filter:invert(1) hue-rotate(90deg);transform:translateX(3px)}
+    100%{filter:invert(0);transform:none}}
+  .dim{transition:filter 4s ease;filter:brightness(.55);}
+  @media(prefers-reduced-motion:reduce){.glitch,.msg,#lock-hint{animation:none!important}}
+</style>
+</head>
+<body>
+<div id="phone">
+  <div id="statusbar">
+    <span id="sb-time">--:--</span>
+    <span id="sb-batt"><span id="sb-batt-pct">--%</span>
+      <span class="batt-icon"><span class="batt-fill" id="sb-batt-fill" style="width:60%"></span></span>
+    </span>
+  </div>
+
+  <div class="screen active" id="screen-lock">
+    <div id="lock-time">--:--</div>
+    <div id="lock-date">—</div>
+    <div id="lock-notif">
+      <div class="n-app"><span>MESSAGES</span><span>maintenant</span></div>
+      <div class="n-title">Numéro inconnu</div>
+      <div class="n-body">1 nouveau message</div>
+    </div>
+    <div id="lock-hint">Appuie pour déverrouiller</div>
+  </div>
+
+  <div class="screen" id="screen-alibi">
+    <div class="pad-top"></div>
+    <div id="alibi-head">
+      <div class="app-name">NOTES</div>
+      <h1>Ce soir, tu es quelqu'un d'autre.</h1>
+      <div class="meta" id="alibi-meta"></div>
+    </div>
+    <div id="alibi-body"></div>
+    <div id="alibi-foot">
+      <div id="alibi-timer"></div>
+      <button class="btn primary" id="btn-memorise">J'ai mémorisé</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-chat">
+    <div class="pad-top"></div>
+    <div id="chat-head">
+      <div id="chat-avatar">?</div>
+      <div>
+        <div id="chat-name">Numéro inconnu</div>
+        <div id="chat-sub">en ligne</div>
+      </div>
+    </div>
+    <div id="chat-log"><div id="typing"><i></i><i></i><i></i></div></div>
+    <div id="chat-input">
+      <textarea id="inp" rows="1" placeholder="Message" autocomplete="off"></textarea>
+      <button id="send" disabled>➤</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-end">
+    <div id="end-title"></div>
+    <div id="end-sub"></div>
+    <div id="end-report"></div>
+    <button class="btn primary" id="btn-replay">Nouvelle partie</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   MESSAGES — moteur v2 (100% local)
+   Nouveautés v2 :
+   - Saisie libre à tout moment (messages hors question gérés)
+   - Relance avant pénalité quand la réponse n'est pas comprise
+   - Gestion de la négation ("j'étais pas au bar" ≠ contradiction)
+   - Zones d'ombre invisibles : la note ne les signale plus
+   - L'entité CREUSE : questions d'approfondissement après une bonne
+     réponse, chaque improvisation est verrouillée puis re-vérifiée
+   ===================================================================== */
+
+const $=id=>document.getElementById(id);
+const rand=a=>a[Math.floor(Math.random()*a.length)];
+const randInt=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const shuffle=a=>{const c=[...a];for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}return c;};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------- Texte : normalisation, Levenshtein, négation ---------- */
+function norm(s){return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+  .replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim();}
+function tokens(s){return norm(s).split(" ").filter(w=>w.length>0);}
+function lev(a,b){
+  const m=a.length,n=b.length;if(!m)return n;if(!n)return m;
+  let prev=Array.from({length:n+1},(_,i)=>i),cur=new Array(n+1);
+  for(let i=1;i<=m;i++){cur[0]=i;
+    for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    [prev,cur]=[cur,prev];}
+  return prev[n];
+}
+const NEG=new Set(["pas","jamais","non","aucun","aucune","ni","sans"]);
+/* Trouve un mot (à ~1-2 fautes près). Renvoie l'index du token, ou -1. */
+function findFuzzy(toks,word){
+  const w=norm(word),tol=w.length>=6?2:w.length>=4?1:0;
+  for(let i=0;i<toks.length;i++) if(lev(toks[i],w)<=tol) return i;
+  return -1;
+}
+/* Le texte affirme-t-il ce mot ? (présent ET non nié dans les 3 tokens avant) */
+function affirms(text,word){
+  if(norm(word).includes(" ")){ // expression composée
+    if(!norm(text).includes(norm(word))) return false;
+    const before=norm(text).split(norm(word))[0].split(" ").slice(-3);
+    return !before.some(t=>NEG.has(t));
+  }
+  const toks=tokens(text),i=findFuzzy(toks,word);
+  if(i<0)return false;
+  for(let k=Math.max(0,i-3);k<i;k++) if(NEG.has(toks[k])) return false;
+  return true;
+}
+const affirmsAny=(text,words)=>words.some(w=>affirms(text,w));
+const hasAny=(text,words)=>{const t=tokens(text);return words.some(w=>norm(w).includes(" ")?norm(text).includes(norm(w)):findFuzzy(t,w)>=0);};
+
+function extractHour(text){
+  const t=norm(text);
+  if(/minuit/.test(t))return 0; if(/midi/.test(t))return 12;
+  const m=t.match(/(\d{1,2})\s*(h|heure)/)||t.match(/\b(\d{1,2})\b/);
+  if(m){const h=parseInt(m[1],10);if(h>=0&&h<=23)return h;}
+  return null;
+}
+const STOPWORDS=new Set(("je tu il elle on nous vous ils elles le la les un une des de du d l a ai as est etait etais suis avec pour dans sur pas ne plus rien sais crois pense que qui quoi ou et mais donc or ni car si me te se ma ta sa mon ton son mes tes ses c ca cela y en tres bien tout toute vers genre juste truc chose comme ete alle allee bas la").split(" "));
+function contentWords(text){return tokens(text).filter(w=>w.length>=3&&!STOPWORDS.has(w));}
+const INSULTS=["connard","conne","connasse","batard","enfoire","ta gueule","ferme la","nique","pute","encule","debile","abruti","fdp","ntm","casse toi","degage"];
+/* "je sais plus", "aucune idée" → aveu de trou de mémoire */
+const MEMORY_HOLE=["sais plus","souviens plus","souviens pas","aucune idee","je sais pas","jsp","aucun souvenir","oublie"];
+
+/* =====================================================================
+   1) GÉNÉRATEUR D'ALIBI
+   La note n'affiche QUE les faits. Tout ce qu'elle ne dit pas est une
+   zone d'ombre implicite : le joueur improvise, le jeu verrouille.
+   ===================================================================== */
+const POOLS={
+  prenoms:["Julien","Camille","Maxime","Léa","Romain","Sarah","Thomas","Chloé","Nadia","Hugo"],
+  metiers:["serveur en brasserie","vendeur en magasin","livreur","étudiant","agent de sécurité","préparateur de commandes"],
+  lieux:[
+    { canon:"au cinéma",
+      syn:["cinema","cine","cinoche","film","seance","voir un film","ugc","pathe","gaumont","mk2","cgr"],
+      incompat:["bar","restaurant","resto","boulot","travail","salle de sport","gym","chez moi","reste chez moi","concert","boite"],
+      details:[
+        {canon:"un film d'horreur",syn:["horreur","film d horreur","peur","flippant","epouvante"],incompat:["comedie","comique","drole","dessin anime","romantique"]},
+        {canon:"une comédie",syn:["comedie","comique","drole","rire","marrant","rigole"],incompat:["horreur","peur","epouvante","drame"]},
+        {canon:"un thriller",syn:["thriller","suspense","policier","enquete"],incompat:["comedie","drole","dessin anime","romantique"]}],
+      qDetail:"ce que tu as vu",
+      creuser:[
+        {key:"nom_lieu",label:"le nom du cinéma",qA:"Quel cinéma ? Son nom.",qC:"c'était quel ciné ? 🙂"},
+        {key:"affluence",label:"le monde dans la salle",qA:"Il y avait du monde dans la salle ?",qC:"y avait du monde ?"},
+        {key:"fin_film",label:"la fin du film",qA:"Comment ça se termine ?",qC:"et ça finit comment ?? spoile-moi 🙂"}]},
+    { canon:"au restaurant",
+      syn:["restaurant","resto","manger","mange","diner","dine","bouffer","table"],
+      incompat:["cinema","cine","film","bar","salle de sport","gym","chez moi","reste chez moi","boulot","travail","boite"],
+      details:[
+        {canon:"une pizza",syn:["pizza","italien","margherita","quatre fromages","4 fromages","calzone"],incompat:["burger","sushi","kebab","chinois","couscous"]},
+        {canon:"un burger",syn:["burger","hamburger","frites","cheeseburger"],incompat:["pizza","sushi","kebab","chinois","couscous"]},
+        {canon:"des sushis",syn:["sushi","sushis","japonais","maki","california"],incompat:["pizza","burger","kebab","italien","couscous"]}],
+      qDetail:"ce que tu as mangé",
+      creuser:[
+        {key:"nom_lieu",label:"le nom du restaurant",qA:"Quel restaurant ? Son nom.",qC:"il s'appelle comment ce resto ?"},
+        {key:"paiement",label:"le moyen de paiement",qA:"Tu as réglé comment ?",qC:"t'as payé comment ?"},
+        {key:"dessert",label:"le dessert",qA:"Dessert ?",qC:"et en dessert ?? 🙂"}]},
+    { canon:"chez un ami",
+      syn:["ami","amie","pote","chez lui","chez elle","copain","copine","appart","pote a moi"],
+      incompat:["cinema","cine","restaurant","resto","bar","salle de sport","gym","boulot","travail","seul chez moi","boite"],
+      details:[
+        {canon:"jouer aux jeux vidéo",syn:["jeux video","jeu video","jouer","console","manette","fifa","ps5","switch"],incompat:["film","reviser","match","cuisine","serie"]},
+        {canon:"regarder un match",syn:["match","foot","football","regarde le match","ligue"],incompat:["jeux video","console","reviser","manette"]},
+        {canon:"réviser ensemble",syn:["reviser","revisions","bosser","travailler","partiel","exam","cours"],incompat:["jeux video","match","soiree","fete","console"]}],
+      qDetail:"ce que vous avez fait",
+      creuser:[
+        {key:"nom_ami",label:"le nom de ton ami",qA:"Cet ami a un nom. Donne-le.",qC:"il s'appelle comment ? 🙂"},
+        {key:"habite",label:"là où habite ton ami",qA:"Il habite où ?",qC:"il habite où ?"},
+        {key:"repas_ami",label:"ce que vous avez mangé",qA:"Vous avez mangé quelque chose ?",qC:"vous avez grignoté quoi ?"}]}
+  ],
+  transports:[
+    {canon:"en métro",syn:["metro","ligne","rame","station"],incompat:["voiture","conduit","velo","a pied","bus","taxi","uber","train"],
+     creuser:{key:"detail_transport",label:"ta ligne de métro",qA:"Quelle ligne ?",qC:"quelle ligne ?"}},
+    {canon:"en voiture",syn:["voiture","conduit","caisse","volant","bagnole"],incompat:["metro","bus","a pied","velo","train","taxi","uber"],
+     creuser:{key:"detail_transport",label:"là où tu t'es garé",qA:"Garée où ?",qC:"t'as trouvé à te garer ?? où ça ?"}},
+    {canon:"à pied",syn:["a pied","pied","marche","marchant","marcher"],incompat:["voiture","metro","bus","velo","conduit","taxi","uber","train"],
+     creuser:{key:"detail_transport",label:"ton temps de marche",qA:"Combien de temps de marche ?",qC:"t'as marché longtemps ?"}},
+    {canon:"en bus",syn:["bus","arret"],incompat:["voiture","metro","a pied","velo","conduit","taxi","train"],
+     creuser:{key:"detail_transport",label:"ton numéro de bus",qA:"Quel numéro ?",qC:"quel bus ?"}}
+  ],
+  /* Zones d'ombre implicites — jamais montrées dans la note */
+  sondes:[
+    {key:"compagnie",label:"qui était avec toi",
+     qA:"Étais-tu seul ? Si non : qui était présent ?",qC:"t'étais avec quelqu'un ? dis-moi tout 👀"},
+    {key:"raison",label:"pourquoi tu y es allé",
+     qA:"Pourquoi ce soir-là, précisément ?",qC:"et qu'est-ce qui t'a pris d'y aller hier ? 🙂"},
+    {key:"tenue",label:"ce que tu portais",
+     qA:"Qu'est-ce que tu portais ?",qC:"t'étais habillé comment ? 🙂"}
+  ]
+};
+
+function generateAlibi(){
+  const lieu=rand(POOLS.lieux);
+  return {
+    prenom:rand(POOLS.prenoms), metier:rand(POOLS.metiers),
+    lieu, detail:rand(lieu.details), transport:rand(POOLS.transports),
+    hArrivee:randInt(18,20), hRetour:randInt(22,23)
+  };
+}
+
+/* =====================================================================
+   2) ARCHÉTYPES
+   ===================================================================== */
+const ARCHETYPES={
+  archiviste:{
+    id:"archiviste", nom:"Numéro inconnu", avatar:"▪",
+    typingBase:[1100,2400],
+    weights:{contradiction:30,evasive:9,slow:8,fast:8,insult:0,dry:0},
+    slowMs:50000, fastMs:2200, creuseChance:0.85, maxReprobes:2,
+    intro:a=>["Bonsoir.","Je sais que tu es là. Ton statut indique « en ligne ».",
+      "Je vais te poser des questions sur hier soir. Réponds simplement. Ne complique pas."],
+    q:{lieu:"Où étais-tu hier soir ?",
+       detail:a=>`Précise ${a.lieu.qDetail}.`,
+       hArrivee:"À quelle heure es-tu arrivé sur place ?",
+       transport:"Comment t'y es-tu rendu ?",
+       hRetour:"À quelle heure es-tu rentré ?"},
+    reprobe:l=>`Reprenons. ${l.charAt(0).toUpperCase()+l.slice(1)} — redis-le-moi. À l'identique.`,
+    react:{
+      contradiction:["Ce n'est pas ce que tu as dit. Je note.","Les deux versions ne peuvent pas être vraies. J'archive les deux.","Ton récit vient de se contredire lui-même."],
+      relance:["Sois précis.","Développe. Un fait, pas une impression.","Reformule. Clairement."],
+      evasive:["Tu esquives. C'est une donnée en soi.","Je prends note de ton refus de répondre."],
+      memhole:["On n'oublie pas ce qu'on a vécu hier. On oublie ce qu'on a inventé.","« Je ne sais plus. » Intéressant."],
+      slow:["Tu as mis longtemps. C'est long, pour quelque chose de vécu.","Ce silence est une donnée. Je l'archive aussi."],
+      fast:["Tu réponds vite. Comme un texte appris.","Personne ne se souvient aussi vite. On récite, ou on se souvient."],
+      good:["Noté.","Bien.","J'archive.","Continue."],
+      warn:"Ton récit se fissure. Je continue.",
+      insult:["Le registre de ta réponse est sans intérêt. Seul son contenu compte."],
+      offtopic:["C'est moi qui pose les questions.","Nous n'en sommes pas là."]
+    },
+    win:a=>["J'ai terminé.","Ton récit tient. Chaque pièce est à sa place.","C'est rare.","Nous nous reparlerons. J'ai tout archivé."],
+    death:(a,strikes,t)=>["Récapitulons.",
+      strikes.length?"Pièces au dossier :\n"+strikes.map((s,i)=>`${i+1}. ${s}`).join("\n"):"Ton dossier est vide. Comme ton histoire.",
+      `« ${a.prenom} » n'existe pas. Ton histoire non plus.`,"Dossier clos."],
+    deathTitle:"DOSSIER CLOS",
+    deathSub:"L'Archiviste n'a besoin que d'une incohérence. Tu lui en as donné davantage."
+  },
+  confidente:{
+    id:"confidente", nom:"💗", avatar:"☺",
+    typingBase:[850,1900],
+    weights:{contradiction:22,evasive:6,slow:5,fast:0,insult:16,dry:10},
+    slowMs:90000, fastMs:0, creuseChance:0.9, maxReprobes:2,
+    intro:a=>["coucou 🙂","c'est moi !","tu réponds enfin... tu me manquais","raconte-moi ta soirée d'hier. tout."],
+    q:{lieu:"t'étais où hier soir ? 🙂",
+       detail:a=>`ohhh raconte !! c'était quoi, ${a.lieu.qDetail} ?`,
+       hArrivee:"t'es arrivé vers quelle heure ?",
+       transport:"t'y es allé comment ?",
+       hRetour:"et rentré à quelle heure ? j'espère pas trop tard 😊"},
+    reprobe:l=>`attends... redis-moi ${l} ? j'ai déjà oublié 🙂`,
+    react:{
+      contradiction:["hmm... c'est pas ce que tu m'as dit tout à l'heure 🙂","pourquoi tu changes ta version ?","tu m'avais dit autre chose. je m'en souviens très bien."],
+      relance:["genre ?? raconte-moi vraiment 🙂","dis-m'en plus... tu me caches quoi ?","allez, détaille un peu 🙂"],
+      evasive:["tu me caches des choses.","à moi ? tu fais ça à moi ?"],
+      memhole:["tu te souviens jamais de rien quand c'est moi qui demande...","c'était HIER. comment tu peux avoir oublié ? 🙂"],
+      slow:["t'étais où là ? j'attendais...","tu mets du temps. tu réfléchis à quoi ?"],
+      fast:[],
+      good:["hihi ok 🙂","je vois je vois","t'es mignon quand tu racontes","d'accord 🙂","j'adore"],
+      warn:"je te sens distant. j'aime pas ça du tout.",
+      insult:["...","je vais faire comme si j'avais rien lu.","tu me fais de la peine."],
+      dry:["pourquoi tu me parles comme ça ?","t'es bizarre là. c'est pas toi.","un mot ? c'est tout ce que je mérite ?"],
+      offtopic:["hihi attends, chacun son tour 🙂","laisse-moi finir mes questions d'abord 🙂"]
+    },
+    win:a=>["voilà, c'était pas si dur 🙂","tu es exactement comme je l'imaginais.","dors bien.","à très vite. très très vite."],
+    death:(a,strikes,t)=>["ok.","j'ai compris.","tu me mens. depuis le début.","c'est pas grave 🙂",
+      `il est ${t}. tu ne dors pas.`,"reste où tu es.","j'arrive."],
+    deathTitle:"ELLE ARRIVE",
+    deathSub:"La Confidente pardonne les faits. Jamais le ton. Tu as cessé d'être « toi » — et elle l'a senti."
+  }
+};
+
+/* =====================================================================
+   3) ÉTAT + FILE DE QUESTIONS
+   Chaque étape : {type, ...}. Types :
+     fact   → vérifié contre l'alibi (syn/incompat/heure)
+     probe  → improvisation verrouillée (1re réponse = canon)
+     reprobe→ re-vérification d'une improvisation verrouillée
+   ===================================================================== */
+const S={phase:"lock",alibi:null,arch:null,queue:[],step:null,retried:false,
+  suspicion:0,strikes:[],locks:{},qShownAt:0,warned:false,dead:false,
+  offtopicCount:0,exchanges:0};
+
+function buildQueue(){
+  const a=S.alibi,arch=S.arch,q=arch.q;
+  const sondes=shuffle(POOLS.sondes).slice(0,2); // 2 zones d'ombre cachées par partie
+  S.queue=[
+    {type:"fact",kind:"lieu",text:q.lieu},
+    {type:"fact",kind:"detail",text:q.detail(a),creuseFrom:"lieu"},
+    {type:"probe",p:sondes[0],text:arch.id==="archiviste"?sondes[0].qA:sondes[0].qC},
+    {type:"fact",kind:"hArrivee",text:q.hArrivee},
+    {type:"fact",kind:"transport",text:q.transport,creuseFrom:"transport"},
+    {type:"probe",p:sondes[1],text:arch.id==="archiviste"?sondes[1].qA:sondes[1].qC},
+    {type:"fact",kind:"hRetour",text:q.hRetour},
+    {type:"reprobe_marker"} // remplacé au vol par les re-vérifications
+  ];
+}
+
+/* Insère des questions d'approfondissement après une bonne réponse */
+function insertCreuser(from){
+  const a=S.alibi,arch=S.arch;
+  if(Math.random()>arch.creuseChance)return;
+  let cands=[];
+  if(from==="lieu") cands=shuffle(a.lieu.creuser).slice(0,2);
+  else if(from==="transport"&&a.transport.creuser) cands=[a.transport.creuser];
+  const steps=cands.filter(c=>!(c.key in S.locks)).map(c=>({
+    type:"probe",p:c,text:arch.id==="archiviste"?c.qA:c.qC}));
+  S.queue.splice(1,0,...steps.map((s,i)=>s)); // juste après l'étape courante retirée
+}
+
+/* Construit les re-vérifications à partir des improvisations verrouillées */
+function buildReprobes(){
+  const arch=S.arch;
+  const keys=shuffle(Object.keys(S.locks)).slice(0,arch.maxReprobes);
+  return keys.map(k=>({type:"reprobe",key:k,label:S.locks[k].label,
+    text:arch.reprobe(S.locks[k].label)}));
+}
+
+/* =====================================================================
+   4) ÉVALUATION D'UNE RÉPONSE
+   ===================================================================== */
+function evalFact(kind,answer){
+  const a=S.alibi;
+  const F=kind==="lieu"?a.lieu:kind==="detail"?a.detail:kind==="transport"?a.transport:null;
+  if(F){
+    if(affirmsAny(answer,F.incompat))return{v:"contradiction",d:`${kind==="lieu"?"lieu":kind==="detail"?"détail":"trajet"} contredit (« ${F.canon} » attendu)`};
+    if(hasAny(answer,F.syn))return{v:"good"};
+    return{v:"unsure"};
+  }
+  const attendu=kind==="hArrivee"?a.hArrivee:a.hRetour;
+  const h=extractHour(answer);
+  if(h===null)return{v:"unsure"};
+  const diff=Math.abs(h-attendu);
+  if(diff===0)return{v:"good"};
+  if(diff===1)return{v:"hour_off",d:`heure approximative (${h}h au lieu de ${attendu}h)`};
+  return{v:"contradiction",d:`heure fausse (${h}h au lieu de ${attendu}h)`};
+}
+function evalProbe(step,answer){
+  const w=contentWords(answer);
+  if(hasAny(answer,MEMORY_HOLE))return{v:"memhole"};
+  if(w.length===0)return{v:"unsure"};
+  S.locks[step.p.key]={label:step.p.label,words:w};
+  return{v:"good"};
+}
+function evalReprobe(step,answer){
+  const lock=S.locks[step.key];
+  const w=contentWords(answer);
+  if(hasAny(answer,MEMORY_HOLE))return{v:"contradiction",d:`a « oublié » ${lock.label}`};
+  if(w.length===0)return{v:"unsure"};
+  const overlap=w.filter(x=>lock.words.some(l=>lev(x,l)<=(l.length>=6?2:1)));
+  if(overlap.length>0)return{v:"good"};
+  return{v:"contradiction",d:`version changée : ${lock.label}`};
+}
+
+/* =====================================================================
+   5) INTERFACE
+   ===================================================================== */
+function fmtTime(d=new Date()){return d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});}
+function tickClock(){
+  $("sb-time").textContent=fmtTime();
+  $("lock-time").textContent=fmtTime();
+  $("lock-date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+}
+setInterval(tickClock,15000);tickClock();
+
+let battPct=randInt(37,82);
+function paintBatt(){
+  $("sb-batt-pct").textContent=battPct+"%";
+  $("sb-batt-fill").style.width=battPct+"%";
+  $("sb-batt-fill").style.background=battPct<=20?"var(--danger)":"var(--text)";
+}
+if(navigator.getBattery){
+  navigator.getBattery().then(b=>{
+    const u=()=>{battPct=Math.round(b.level*100);paintBatt();};
+    b.addEventListener("levelchange",u);u();
+  }).catch(paintBatt);
+}else paintBatt();
+
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));$(id).classList.add("active");}
+setTimeout(()=>$("lock-notif").classList.add("show"),1400);
+$("screen-lock").addEventListener("click",()=>{if(S.phase==="lock")startRun();});
+
+function startRun(){
+  S.alibi=generateAlibi();
+  S.arch=ARCHETYPES[rand(Object.keys(ARCHETYPES))];
+  S.suspicion=0;S.strikes=[];S.locks={};S.warned=false;S.dead=false;
+  S.retried=false;S.step=null;S.offtopicCount=0;S.exchanges=0;
+  buildQueue();
+  renderAlibi();
+  S.phase="alibi";show("screen-alibi");
+  startAlibiTimer(45);
+}
+function renderAlibi(){
+  const a=S.alibi;
+  $("alibi-meta").textContent="Modifiée à "+fmtTime()+" · Cette note s'effacera.";
+  $("alibi-body").innerHTML=`
+    <p>Cette nuit, si quelqu'un te parle, tu t'appelles <b>${a.prenom}</b>. Tu es <b>${a.metier}</b>.</p>
+    <p>Hier soir, tu étais <b>${a.lieu.canon}</b> : <b>${a.detail.canon}</b>.</p>
+    <p>Arrivé vers <b>${a.hArrivee}h</b>. Rentré vers <b>${a.hRetour}h</b>. Déplacement <b>${a.transport.canon}</b>.</p>
+    <p class="warn">⚠ Tout ce que cette note ne dit pas, tu devras l'inventer. Et t'en souvenir.</p>
+    <p class="warn2">Ne contrarie pas ce qui va te parler. Ne change jamais de version. Cette note ne réapparaîtra pas.</p>`;
+}
+let alibiTimerId=null;
+function startAlibiTimer(sec){
+  let left=sec;
+  const paint=()=>$("alibi-timer").textContent="Effacement dans "+left+" s";
+  paint();
+  alibiTimerId=setInterval(()=>{left--;paint();if(left<=0){clearInterval(alibiTimerId);leaveAlibi();}},1000);
+}
+$("btn-memorise").addEventListener("click",()=>{clearInterval(alibiTimerId);leaveAlibi();});
+async function leaveAlibi(){
+  $("screen-alibi").classList.add("deleting");
+  await sleep(900);
+  $("screen-alibi").classList.remove("deleting");
+  openChat();
+}
+
+/* --- Conversation --- */
+function clearLog(){[...$("chat-log").children].forEach(c=>{if(c.id!=="typing")c.remove();});}
+function scrollLog(){const l=$("chat-log");l.scrollTop=l.scrollHeight;}
+function addMsg(text,cls){
+  const d=document.createElement("div");d.className="msg "+cls;d.textContent=text;
+  $("chat-log").insertBefore(d,$("typing"));scrollLog();return d;
+}
+function addReceipt(){
+  const r=document.createElement("div");r.className="receipt";r.textContent="Lu à "+fmtTime();
+  $("chat-log").insertBefore(r,$("typing"));scrollLog();
+}
+async function entitySay(text){
+  if(S.dead)return;
+  $("chat-sub").textContent="en train d'écrire…";
+  $("typing").classList.add("show");scrollLog();
+  const[mn,mx]=S.arch.typingBase;
+  await sleep(randInt(mn,mx)+Math.min(text.length*16,2000));
+  $("typing").classList.remove("show");
+  $("chat-sub").textContent="en ligne";
+  addMsg(text,"in");
+  await sleep(randInt(300,700));
+}
+async function entitySayAll(list){for(const t of list){await entitySay(t);}}
+
+function openChat(){
+  S.phase="chat";show("screen-chat");clearLog();
+  $("chat-name").textContent=S.arch.nom;
+  $("chat-avatar").textContent=S.arch.avatar;
+  $("chat-sub").textContent="en ligne";
+  addMsg("Aujourd'hui "+fmtTime(),"sys");
+  updateSendState();
+  runIntro();
+}
+async function runIntro(){
+  await sleep(1000);
+  await entitySayAll(S.arch.intro(S.alibi));
+  nextStep();
+}
+async function nextStep(){
+  if(S.phase!=="chat")return;
+  let step=S.queue.shift();
+  if(step&&step.type==="reprobe_marker"){
+    const reps=buildReprobes();
+    S.queue.unshift(...reps);
+    step=S.queue.shift();
+  }
+  if(!step)return winRound();
+  S.step=step;S.retried=false;
+  await entitySay(step.text);
+  S.qShownAt=Date.now();
+}
+
+/* --- Saisie : toujours active pendant la conversation --- */
+const inp=$("inp"),send=$("send");
+function updateSendState(){send.disabled=!(S.phase==="chat"&&!S.dead&&inp.value.trim());}
+inp.addEventListener("input",()=>{inp.style.height="auto";inp.style.height=Math.min(inp.scrollHeight,110)+"px";updateSendState();});
+inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(!send.disabled)submit();}});
+send.addEventListener("click",submit);
+
+let handling=false;
+async function submit(){
+  if(S.phase!=="chat"||S.dead)return;
+  const text=inp.value.trim();if(!text)return;
+  inp.value="";inp.style.height="auto";updateSendState();
+  addMsg(text,"out");
+  await sleep(randInt(350,800));
+  addReceipt();
+  if(handling||!S.step){ // message hors question (ou entité en train de réagir)
+    S.offtopicCount++;
+    if(S.offtopicCount<=2&&!handling){await entitySay(rand(S.arch.react.offtopic));}
+    return;
+  }
+  const step=S.step;S.step=null; // la réponse consomme la question en cours
+  handling=true;
+  try{await handleAnswer(step,text);}finally{handling=false;}
+}
+
+/* --- Jugement --- */
+async function handleAnswer(step,text){
+  const arch=S.arch,W=arch.weights;
+  const elapsed=Date.now()-S.qShownAt;
+  S.exchanges++;
+  const reactions=[];
+  let creuseAfter=null;
+
+  if(hasAny(text,INSULTS)){
+    S.suspicion+=W.insult;
+    reactions.push(rand(arch.react.insult));
+    if(W.insult>0)S.strikes.push("hostilité envers elle");
+  }
+  if(W.dry>0&&contentWords(text).length===0&&tokens(text).length<=2&&!hasAny(text,INSULTS)){
+    S.suspicion+=W.dry;reactions.push(rand(arch.react.dry));
+  }
+  if(arch.slowMs&&elapsed>arch.slowMs){S.suspicion+=W.slow;reactions.push(rand(arch.react.slow));}
+  else if(arch.fastMs&&elapsed<arch.fastMs&&W.fast>0&&text.length>8){S.suspicion+=W.fast;reactions.push(rand(arch.react.fast));}
+
+  const res=step.type==="fact"?evalFact(step.kind,text)
+          :step.type==="probe"?evalProbe(step,text)
+          :evalReprobe(step,text);
+
+  if(res.v==="unsure"&&!S.retried){
+    // Pas compris → l'entité relance, sans pénalité. Même question, 2e chance.
+    S.retried=true;S.step=step;
+    await entitySayAll(reactions.slice(0,1));
+    await entitySay(rand(arch.react.relance));
+    S.qShownAt=Date.now();
+    return;
+  }
+
+  if(res.v==="contradiction"){
+    S.suspicion+=W.contradiction;S.strikes.push(res.d||"contradiction");
+    reactions.push(rand(arch.react.contradiction));
+  }else if(res.v==="hour_off"){
+    S.suspicion+=Math.round(W.contradiction/4);
+    reactions.push(arch.id==="archiviste"?"Approximatif. J'archive l'écart.":"t'es sûr de l'heure ? bon... 🙂");
+  }else if(res.v==="memhole"){
+    S.suspicion+=W.evasive+4;
+    reactions.push(rand(arch.react.memhole));
+    if(step.type==="probe"){S.locks[step.p.key]={label:step.p.label,words:["oublie"]};}
+  }else if(res.v==="unsure"){
+    S.suspicion+=W.evasive;
+    reactions.push(rand(arch.react.evasive));
+    if(step.type==="probe"){S.locks[step.p.key]={label:step.p.label,words:contentWords(text)};}
+  }else{
+    if(reactions.length===0)reactions.push(rand(arch.react.good));
+    if(step.type==="fact"&&step.creuseFrom)creuseAfter=step.creuseFrom;
+  }
+
+  if(S.suspicion>=100||S.strikes.length>=3)return death();
+
+  await entitySayAll(reactions.slice(0,2));
+  if(S.suspicion>=60&&!S.warned){S.warned=true;await entitySay(arch.react.warn);}
+
+  if(creuseAfter){
+    // insère les questions d'approfondissement EN TÊTE de file
+    const a=S.alibi;
+    let cands=[];
+    if(creuseAfter==="lieu")cands=shuffle(a.lieu.creuser).slice(0,2);
+    else if(creuseAfter==="transport"&&a.transport.creuser)cands=[a.transport.creuser];
+    const steps=cands.filter(c=>!(c.key in S.locks)).map(c=>({
+      type:"probe",p:c,text:arch.id==="archiviste"?c.qA:c.qC}));
+    S.queue.unshift(...steps);
+  }
+  nextStep();
+}
+
+/* --- Fins --- */
+async function winRound(){
+  await entitySayAll(S.arch.win(S.alibi));
+  await sleep(1500);
+  S.phase="end";updateSendState();
+  $("end-title").textContent="Tu as survécu.";
+  $("end-title").style.color="var(--ok)";
+  $("end-sub").textContent="Entité : "+(S.arch.id==="archiviste"?"l'Archiviste":"la Confidente")+
+    " · "+S.exchanges+" réponses · Suspicion finale : "+S.suspicion+"/100.";
+  $("end-report").style.display="none";
+  show("screen-end");
+}
+async function death(){
+  const lines=S.arch.death(S.alibi,S.strikes,fmtTime());
+  await entitySayAll(lines);
+  S.dead=true;S.phase="dying";updateSendState();
+  $("chat-sub").textContent=S.arch.id==="confidente"?"position : proche":"hors ligne";
+  $("phone").classList.add("glitch");
+  await sleep(1800);
+  $("phone").classList.remove("glitch");
+  $("phone").classList.add("dim");
+  await sleep(1100);
+  $("end-title").textContent=S.arch.deathTitle;
+  $("end-title").style.color="var(--danger)";
+  $("end-sub").textContent=S.arch.deathSub;
+  const rep=$("end-report");
+  if(S.strikes.length){rep.style.display="block";
+    rep.innerHTML="<b>Ce qui t'a trahi :</b><br>"+S.strikes.map(s=>"• "+s).join("<br>");
+  }else rep.style.display="none";
+  show("screen-end");S.phase="end";
+  $("phone").classList.remove("dim");
+}
+$("btn-replay").addEventListener("click",()=>startRun());
+</script>
+</body>
+</html>
